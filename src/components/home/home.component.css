@@ -1,0 +1,30 @@
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 340px);
+  margin: 0 auto;
+}
+
+.image-container img {
+  max-width: 25%;
+  opacity: 0.75;
+  height: auto;
+}
+
+.app-thesis {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  margin-top: 180px;
+  width: 100%;
+}
+
+.app-thesis h4 {
+  color: #474946;
+  font-size: large;
+  line-height: 1.6;
+  width: 100%;
+}
