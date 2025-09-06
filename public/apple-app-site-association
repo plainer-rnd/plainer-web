@@ -1,0 +1,19 @@
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "RY4T9L9A5P.uk.co.plainer",
+                "paths": [
+                    "/join-shared-trip"
+                ]
+            },
+            {
+                "appID": "RY4T9L9A5P.uk.co.plainer.dev",
+                "paths": [
+                    "/join-shared-trip-dev"
+                ]
+            }
+        ]
+    }
+}
