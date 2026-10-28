@@ -1019,6 +1019,44 @@ a:hover { color: var(--primary-hover); }
   .policy { padding: 40px 16px 64px; }
 }
 
+/* WTM on larger screens: two columns instead of a centred phone column */
+@media (min-width: 900px) {
+  .wtm { max-width: var(--max-w); padding: 0 24px; }
+  .wtm__header { padding: 20px 0; }
+  .wtm__header .brand__icon { width: 36px; height: 36px; border-radius: 9px; }
+  .wtm__header .brand__name { font-size: 22px; }
+  .wtm__badge { padding: 8px 14px; font-size: 13px; }
+
+  .wtm main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "hero phone"
+      "try work";
+    column-gap: 48px;
+    row-gap: 24px;
+    align-items: stretch;
+  }
+  .wtm__hero { grid-area: hero; padding: 32px 0 0; align-self: center; gap: 24px; }
+  .wtm__hero .pill { padding: 7px 14px; font-size: 14px; }
+  .wtm__title { font-size: clamp(56px, 6vw, 80px); }
+  .wtm__lead { max-width: 520px; font-size: 20px; }
+  .wtm__hero .btn-appstore { align-self: flex-start; }
+  .wtm__fine { align-self: flex-start; font-size: 14px; }
+
+  .wtm__phone { grid-area: phone; height: 620px; margin-top: 0; overflow: visible; }
+  .wtm__phone .phone-frame { width: 280px; margin-left: -140px; padding: 9px; border-radius: 44px; }
+  .wtm__phone .phone-frame__screen { border-radius: 36px; }
+
+  .wtm-card { grid-area: try; margin: 0; padding: 36px; }
+  .wtm-card--ink { grid-area: work; justify-content: center; }
+  .wtm-card__title { font-size: 32px; }
+  .wtm-card--ink .wtm-card__title { font-size: 30px; }
+  .wtm-card--ink p { font-size: 17px; }
+  .wtm-card--ink .btn--ghost-light { align-self: flex-start; padding: 0 28px; }
+  .wtm__footer { padding: 48px 0 40px; }
+}
+
 @media (max-width: 1023.98px) {
   .site-nav--desktop { gap: 20px; }
 }
