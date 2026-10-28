@@ -56,6 +56,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Soft route-coloured waves behind everything (lavender top-left, mint bottom-right), echoing the brand card */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='p' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23D9D6F7'/><stop offset='1' stop-color='%23F6F6F3' stop-opacity='0'/></linearGradient><linearGradient id='g' x1='1' y1='1' x2='0' y2='0'><stop offset='0' stop-color='%23BFE8D3'/><stop offset='1' stop-color='%23F6F6F3' stop-opacity='0'/></linearGradient></defs><path d='M0 0H900C820 90 700 110 600 190C500 270 420 250 300 330C190 405 90 380 0 440Z' fill='url(%23p)' opacity='.75'/><path d='M0 0H620C540 80 470 90 380 150C290 210 170 200 0 270Z' fill='url(%23p)' opacity='.6'/><path d='M1440 900V420C1350 450 1280 520 1190 570C1090 625 1000 610 920 690C850 760 780 850 700 900Z' fill='url(%23g)' opacity='.7'/><path d='M1440 900V560C1370 590 1320 650 1250 700C1170 755 1100 760 1040 820C1000 860 960 885 920 900Z' fill='url(%23g)' opacity='.8'/></svg>") center / cover no-repeat;
+}
+
 h1, h2, h3, p, ul { margin: 0; }
 ul { padding: 0; list-style: none; }
 img, svg { display: block; max-width: 100%; }
