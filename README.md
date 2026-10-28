@@ -1,46 +1,33 @@
-# Getting Started with Create React App
+# Plainer website
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, no build step, no npm. Hosted on Cloudflare Pages.
 
-## Available Scripts
+- `index.html`, `support/`, `wtm/`, `policy/`, `404.html`: pages (folder-per-page for clean URLs)
+- `css/site.css`: design tokens (`:root`) plus one block per component
+- `js/site.js`: optional enhancement (copy email, menu close, sticky download bar). Pages work without it
+- `assets/`: images (WebP + JPG at 400/800 px), icons, OG image, QR code
+- `_redirects`, `_headers`: Cloudflare Pages config
+- `apple-app-site-association`: universal links for the iOS app
 
-In the project directory, you can run:
+## Develop
 
-### `npm start`
+    python3 -m http.server 8000   # then open http://localhost:8000
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+`_redirects` and `_headers` only apply on Cloudflare Pages.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Conventions
 
-### `npm test`
+- The header and footer are copied into every page between `<!-- header:start/end -->` and `<!-- footer:start/end -->`. Update all pages together (only `aria-current="page"` differs per page).
+- No inline styles. Links are root-relative.
+- After changing `site.css` or `site.js`, bump the `?v=` query in every page.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Deploy (Cloudflare Pages)
 
-### `npm run build`
+Framework preset: None. Build command: empty. Output directory: `/`.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Before launch
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Replace `PROVIDER_TOKEN` in every App Store link (`grep -r PROVIDER_TOKEN .`) and regenerate `assets/qr-app-store.svg` with the `ct=web_qr` link.
+- Swap the placeholder App Store buttons for Apple's official badge.
+- Fill the `[CONFIRM STEPS …]` FAQ answers on `/support/`.
+- Confirm the "no data collected" claim still holds now that the app has sign-in.

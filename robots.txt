@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://plainer.co.uk/sitemap.xml
