@@ -257,30 +257,10 @@ a:hover { color: var(--primary-hover); }
 .nav-menu__sheet .site-nav__link:hover { background: var(--primary-tint-2); }
 .nav-menu__sheet .btn-pill { justify-content: center; margin-top: 8px; }
 
-/* ---------- App Store button ---------- */
-/* Placeholder artwork: swap for Apple's official badge (see HANDOFF section 12). */
-.btn-appstore {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 58px;
-  padding: 0 26px 0 20px;
-  border-radius: 16px;
-  text-decoration: none;
-}
-.btn-appstore__icon { width: 24px; height: 24px; }
-.btn-appstore__text { display: flex; flex-direction: column; line-height: 1.1; }
-.btn-appstore__small { font-size: 11px; }
-.btn-appstore__big { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
-
-.btn-appstore--dark { background: var(--ink); color: #FFFFFF; }
-.btn-appstore--dark:hover { background: #000000; color: #FFFFFF; }
-.btn-appstore--dark .btn-appstore__small { opacity: 0.8; }
-
-.btn-appstore--light { background: #FFFFFF; color: var(--ink); }
-.btn-appstore--light:hover { background: var(--primary-on-dark-text); color: var(--ink); }
-.btn-appstore--light .btn-appstore__small { color: var(--text-2); }
+/* ---------- App Store badge ---------- */
+/* Apple's official badge artwork: black on light backgrounds, white on dark/green. Keep the 3:1 ratio. */
+.btn-appstore { display: inline-flex; align-self: flex-start; border-radius: 10px; }
+.btn-appstore__badge { width: auto; height: 54px; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -431,13 +411,7 @@ a:hover { color: var(--primary-hover); }
 .hero__copy { display: flex; flex-direction: column; gap: 28px; }
 .hero__copy .lead { max-width: 520px; }
 .hero__actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.hero__actions .btn-appstore {
-  min-height: 60px;
-  justify-content: flex-start;
-}
-.hero__actions .btn-appstore__icon { width: 26px; height: 26px; }
-.hero__actions .btn-appstore__small { font-size: 12px; }
-.hero__actions .btn-appstore__big { font-size: 21px; }
+.hero__actions .btn-appstore__badge { height: 60px; }
 
 .trust {
   display: flex;
@@ -589,10 +563,7 @@ a:hover { color: var(--primary-hover); }
   text-wrap: balance;
 }
 .cta-band__text { max-width: 460px; font-size: 18px; line-height: 1.5; color: var(--primary-on-dark-text); }
-.cta-band .btn-appstore { align-self: flex-start; min-height: 60px; }
-.cta-band .btn-appstore__icon { width: 26px; height: 26px; }
-.cta-band .btn-appstore__small { font-size: 12px; }
-.cta-band .btn-appstore__big { font-size: 21px; }
+.cta-band .btn-appstore__badge { height: 60px; }
 
 .qr-card {
   position: relative;
@@ -853,7 +824,6 @@ a:hover { color: var(--primary-hover); }
   align-items: flex-start;
   gap: 20px;
 }
-.not-found .btn-appstore { margin-top: 8px; }
 
 /* ---------- WTM page (phone-first, centred column on desktop) ---------- */
 .wtm {
@@ -888,6 +858,7 @@ a:hover { color: var(--primary-hover); }
   letter-spacing: -0.035em;
 }
 .wtm__lead { font-size: 17px; line-height: 1.5; color: var(--text-2); }
+.wtm__hero .btn-appstore { align-self: center; }
 .wtm__fine { align-self: center; font-size: 13px; color: var(--text-3); }
 
 .wtm__phone {
@@ -997,10 +968,8 @@ a:hover { color: var(--primary-hover); }
   .lead { font-size: 17px; }
   .hero__actions { flex-direction: column; align-items: stretch; }
   .hero__actions .link-arrow { display: none; }
-  .hero__actions .btn-appstore { justify-content: center; min-height: 58px; }
-  .hero__actions .btn-appstore__icon { width: 24px; height: 24px; }
-  .hero__actions .btn-appstore__small { font-size: 11px; }
-  .hero__actions .btn-appstore__big { font-size: 19px; }
+  .hero__actions .btn-appstore { align-self: center; }
+  .hero__actions .btn-appstore__badge { height: 54px; }
   .trust { justify-content: center; gap: 14px; font-size: 13px; }
 
   /* One phone, with a single callout over its lower-left edge */

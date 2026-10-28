@@ -28,6 +28,5 @@ Framework preset: None. Build command: empty. Output directory: `/`.
 ## Before launch
 
 - Replace `PROVIDER_TOKEN` in every App Store link (`grep -r PROVIDER_TOKEN .`) and regenerate `assets/qr-app-store.svg` with the `ct=web_qr` link.
-- Swap the placeholder App Store buttons for Apple's official badge.
 - Fill the `[CONFIRM STEPS …]` FAQ answers on `/support/`.
 - Confirm the "no data collected" claim still holds now that the app has sign-in.
