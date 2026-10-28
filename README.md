@@ -5,7 +5,7 @@ Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, 
 - `index.html`, `support/`, `wtm/`, `policy/`, `404.html`: pages (folder-per-page for clean URLs)
 - `css/site.css`: design tokens (`:root`) plus one block per component
 - `js/site.js`: optional enhancement (copy email, menu close, sticky download bar). Pages work without it
-- `assets/`: images (WebP + JPG at 400/800 px), icons, OG image, QR code
+- `assets/`: images (WebP + JPG: screenshots at 400/800 px, photos at 800/1600 px), icons, OG image, QR code
 - `_redirects`, `_headers`: Cloudflare Pages config
 - `apple-app-site-association`: universal links for the iOS app
 
@@ -17,7 +17,7 @@ Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, 
 
 ## Conventions
 
-- The header and footer are copied into every page between `<!-- header:start/end -->` and `<!-- footer:start/end -->`. Update all pages together (only `aria-current="page"` differs per page).
+- The header and footer are copied into every page between `<!-- header:start/end -->` and `<!-- footer:start/end -->`. Update all pages together (only `aria-current="page"` differs per page). Photo credits sit in a `.site-credit` line after the footer and differ per page.
 - No inline styles. Links are root-relative.
 - After changing `site.css` or `site.js`, bump the `?v=` query in every page.
 
@@ -71,3 +71,5 @@ Use the preview URL first, then the real domain, on an iPhone in a private tab:
 - Replace `PROVIDER_TOKEN` in every App Store link (`grep -r PROVIDER_TOKEN .`) and regenerate `assets/qr-app-store.svg` with the `ct=web_qr` link.
 - Fill the `[CONFIRM STEPS …]` FAQ answers on `/support/`.
 - Confirm the "no data collected" claim still holds now that the app has sign-in.
+
+- Photo credit links to Wikimedia Commons: the Tower Bridge credit on `/wtm/` links to a Commons search; swap in the exact file page.
