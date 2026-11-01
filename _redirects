@@ -4,3 +4,5 @@
 # Universal-link paths (see apple-app-site-association): visitors without the app land on the home page
 /join-shared-trip     /          302
 /join-shared-trip-dev /          302
+/demo                  /          302
+/demo/                 /          302
