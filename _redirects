@@ -6,3 +6,6 @@
 /join-shared-trip-dev /          302
 /demo                  /          302
 /demo/                 /          302
+
+# Original SPA behaviour: any unknown path serves the home page (existing files and the rules above win)
+/*                     /index.html 200
