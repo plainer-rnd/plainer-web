@@ -1,0 +1,8 @@
+/contact              /support/  301
+/contact/             /support/  301
+/wtm                  /wtm/      301
+/demo                  /          302
+/demo/                 /          302
+
+# Original SPA behaviour: any unknown path serves the home page (existing files and the rules above win)
+/*                     /index.html 200
