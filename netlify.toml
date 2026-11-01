@@ -1,4 +1,6 @@
-# Static site: no build step, serve the repo root as-is.
+# Static site, no framework. The site lives at the repo root, so the build step
+# copies the deployable files into build/ (the directory the Netlify site is
+# already configured to publish).
 [build]
-  publish = "."
-  command = ""
+  publish = "build"
+  command = "mkdir -p build && tar --exclude=./build --exclude=./.git --exclude=./.wrangler --exclude=./README.md --exclude=./netlify.toml --exclude=.DS_Store -cf - . | tar -xf - -C build"
