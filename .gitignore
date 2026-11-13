@@ -18,3 +18,7 @@ web-build/
 # Wrangler
 .wrangler/
 build/
+
+# Playwright
+test-results/
+playwright-report/

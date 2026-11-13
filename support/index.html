@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{var t=localStorage.getItem("plainerTheme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}</script>
 <title>Support · Plainer</title>
 <meta name="description" content="Get help with Plainer, the AI trip planner for iPhone: contact details and answers to common questions.">
 <meta name="apple-itunes-app" content="app-id=6740170760">
@@ -24,8 +25,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/site.css?v=1">
-<script src="/js/site.js?v=1" defer></script>
+<link rel="stylesheet" href="/css/site.css?v=2">
+<script src="/js/theme.js?v=1" defer></script>
+<script src="/js/site.js?v=2" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -41,18 +43,26 @@
         <a class="site-nav__link" href="/#features">Features</a>
         <a class="site-nav__link" href="/support/" aria-current="page"><span>Support</span></a>
         <a class="site-nav__link" href="/policy/">Privacy</a>
-        <a class="btn-pill" href="https://apps.apple.com/app/apple-store/id6740170760?pt=PROVIDER_TOKEN&amp;ct=web_nav&amp;mt=8">Get the app</a>
+        <div class="site-nav__tools">
+          <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch to dark theme"><svg class="theme-toggle__moon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg><svg class="theme-toggle__sun" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+          <a class="btn-pill btn-pill--outline" href="/login/" data-account-link>Log in</a>
+          <a class="btn-pill" href="https://apps.apple.com/app/apple-store/id6740170760?pt=PROVIDER_TOKEN&amp;ct=web_nav&amp;mt=8">Get the app</a>
+        </div>
     </nav>
-    <details class="nav-menu">
-      <summary class="nav-menu__toggle" aria-label="Menu"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16"></path><path d="M4 16h16"></path></svg></summary>
-      <nav class="nav-menu__sheet" aria-label="Main (mobile)">
-        <a class="site-nav__link" href="/#how">How it works</a>
-        <a class="site-nav__link" href="/#features">Features</a>
-        <a class="site-nav__link" href="/support/" aria-current="page"><span>Support</span></a>
-        <a class="site-nav__link" href="/policy/">Privacy</a>
-        <a class="btn-pill" href="https://apps.apple.com/app/apple-store/id6740170760?pt=PROVIDER_TOKEN&amp;ct=web_nav&amp;mt=8">Get the app</a>
-      </nav>
-    </details>
+    <div class="site-header__phone-tools">
+      <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch to dark theme"><svg class="theme-toggle__moon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg><svg class="theme-toggle__sun" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+      <a class="nav-account" href="/login/" aria-label="Log in" data-account-link data-account-icon><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><circle cx="12" cy="10" r="3.2"></circle><path d="M5.8 18.4c1.5-2.2 3.6-3.2 6.2-3.2s4.7 1 6.2 3.2"></path></svg></a>
+      <details class="nav-menu">
+        <summary class="nav-menu__toggle" aria-label="Menu"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h16"></path><path d="M4 16h16"></path></svg></summary>
+        <nav class="nav-menu__sheet" aria-label="Main (mobile)">
+          <a class="site-nav__link" href="/#how">How it works</a>
+          <a class="site-nav__link" href="/#features">Features</a>
+          <a class="site-nav__link" href="/support/" aria-current="page"><span>Support</span></a>
+          <a class="site-nav__link" href="/policy/">Privacy</a>
+          <a class="btn-pill" href="https://apps.apple.com/app/apple-store/id6740170760?pt=PROVIDER_TOKEN&amp;ct=web_nav&amp;mt=8">Get the app</a>
+        </nav>
+      </details>
+    </div>
   </div>
 </header>
 <!-- header:end -->

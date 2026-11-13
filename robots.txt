@@ -1,4 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /login/
+Disallow: /signup/
+Disallow: /trips/
+Disallow: /trip/
+Disallow: /profile/
 
 Sitemap: https://plainer.co.uk/sitemap.xml

@@ -3,6 +3,18 @@
   var root = document.documentElement;
   root.classList.add('js');
 
+  // Header account link: js/firebase.js stores a hint when the user signs in or out.
+  // It only changes the label; /trips/ still checks the real session and redirects if it expired.
+  var signedIn = false;
+  try { signedIn = localStorage.getItem('plainerSignedIn') === '1'; } catch (e) { /* storage blocked */ }
+  if (signedIn) {
+    document.querySelectorAll('[data-account-link]').forEach(function (link) {
+      link.setAttribute('href', '/trips/');
+      if (link.hasAttribute('data-account-icon')) link.setAttribute('aria-label', 'My trips');
+      else link.textContent = 'My trips';
+    });
+  }
+
   // Mobile menu: the <details> works natively; add outside-click and Esc to close.
   var menu = document.querySelector('.nav-menu');
   if (menu) {
