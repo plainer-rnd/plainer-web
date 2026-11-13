@@ -1,0 +1,13 @@
+{
+  "name": "plainer-web-tests",
+  "private": true,
+  "description": "Dev-only test tooling. The site itself has no build step and no npm dependencies; this file is not deployed.",
+  "scripts": {
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
+}

@@ -35,6 +35,41 @@
 
   --header-h: 72px;
   --max-w: 1200px;
+  --header-bg: rgba(246, 246, 243, 0.86);
+  --float-bg: rgba(255, 255, 255, 0.94);
+  --on-primary: #FFFFFF;
+  --ink-panel: #16171B;
+  --primary-deep: #14713A;
+  --ai-deep: #6B5FC9;
+}
+
+/* Dark theme: soft charcoal grey (not black). Same palette as css/app.css. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #26282C;
+  --surface: #303237;
+  --ink: #F1F1EE;
+  --text-2: #CDD0D5;
+  --text-3: #AEB2B9;
+  --nav: #D8DADE;
+  --primary: #3FB06C;
+  --primary-hover: #55C47F;
+  --primary-tint: #2E4B3A;
+  --primary-tint-2: #2D3531;
+  --ai: #8F84EC;
+  --ai-text: #D6D0FF;
+  --ai-tint: #3C3959;
+  --ai-tint-2: #35334D;
+  --coral-tint: #4D3A2B;
+  --coral-tint-2: #3F332B;
+  --coral-text: #F7BC8A;
+  --route: #5A5590;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --divider: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --header-bg: rgba(38, 40, 44, 0.86);
+  --float-bg: rgba(48, 50, 55, 0.94);
+  --on-primary: #10281A;
 }
 
 /* ---------- Base ---------- */
@@ -99,7 +134,7 @@ a:hover { color: var(--primary-hover); }
   z-index: 30;
   padding: 10px 16px;
   border-radius: 12px;
-  background: var(--ink);
+  background: var(--ink-panel);
   color: #FFFFFF;
   font-weight: 600;
   text-decoration: none;
@@ -156,7 +191,7 @@ a:hover { color: var(--primary-hover); }
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(246, 246, 243, 0.86);
+  background: var(--header-bg);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--hairline);
@@ -221,12 +256,49 @@ a:hover { color: var(--primary-hover); }
   padding: 0 18px;
   border-radius: 999px;
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--on-primary);
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
 }
-.btn-pill:hover { background: var(--primary-hover); color: #FFFFFF; }
+.btn-pill:hover { background: var(--primary-hover); color: var(--on-primary); }
+
+/* Header tools: theme toggle, Log in / My trips */
+.site-nav__tools { display: flex; align-items: center; gap: 12px; }
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.theme-toggle:hover { background: var(--hairline); }
+.theme-toggle__sun { display: none; }
+:root[data-theme="dark"] .theme-toggle__moon { display: none; }
+:root[data-theme="dark"] .theme-toggle__sun { display: block; }
+.btn-pill--outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+}
+.btn-pill--outline:hover { background: var(--hairline); color: var(--ink); border-color: var(--ink); }
+.nav-account {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: var(--ink);
+}
+.nav-account:hover { background: var(--hairline); color: var(--ink); }
+.site-header__phone-tools { display: none; align-items: center; gap: 2px; }
 
 /* Mobile menu: <details> so it works without JS */
 .nav-menu { display: none; position: relative; }
@@ -287,9 +359,9 @@ a:hover { color: var(--primary-hover); }
   text-decoration: none;
   cursor: pointer;
 }
-.btn--primary { background: var(--primary); color: #FFFFFF; border: 0; }
-.btn--primary:hover { background: var(--primary-hover); color: #FFFFFF; }
-.btn--outline { background: #FFFFFF; color: var(--ink); border: 1px solid var(--border-strong); }
+.btn--primary { background: var(--primary); color: var(--on-primary); border: 0; }
+.btn--primary:hover { background: var(--primary-hover); color: var(--on-primary); }
+.btn--outline { background: var(--surface); color: var(--ink); border: 1px solid var(--border-strong); }
 .btn--outline:hover { border-color: var(--ink); color: var(--ink); }
 .btn--ghost-light { color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.3); min-height: 50px; }
 .btn--ghost-light:hover { border-color: #FFFFFF; color: #FFFFFF; }
@@ -336,7 +408,7 @@ a:hover { color: var(--primary-hover); }
   --rotate: 0deg;
   padding: 9px;
   border-radius: 44px;
-  background: var(--ink);
+  background: var(--ink-panel);
   box-shadow: 0 30px 60px -20px rgba(22, 23, 27, 0.35);
   transform: rotate(var(--rotate));
 }
@@ -524,11 +596,11 @@ a:hover { color: var(--primary-hover); }
 .feature-tile__title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 .feature-tile__text { color: var(--text-2); }
 
-.feature-tile--ai { background: var(--ai); border-color: transparent; color: #FFFFFF; }
+.feature-tile--ai { background: var(--ai-deep); border-color: transparent; color: #FFFFFF; }
 .feature-tile--ai .feature-tile__icon { color: var(--sparkle-on-ai); }
 .feature-tile--ai .feature-tile__text { color: var(--ai-on-tile); }
 
-.feature-tile--ink { background: var(--ink); border-color: transparent; color: #FFFFFF; }
+.feature-tile--ink { background: var(--ink-panel); border-color: transparent; color: #FFFFFF; }
 .feature-tile--ink .feature-tile__icon { color: var(--primary-on-dark); }
 .feature-tile--ink .feature-tile__text { color: var(--on-ink-text); }
 .feature-tile--ink a { color: var(--primary-on-dark); }
@@ -539,7 +611,7 @@ a:hover { color: var(--primary-hover); }
   position: relative;
   overflow: hidden;
   border-radius: 36px;
-  background: var(--primary);
+  background: var(--primary-deep);
   color: #FFFFFF;
   padding: clamp(36px, 6vw, 72px);
   display: grid;
@@ -625,7 +697,7 @@ a:hover { color: var(--primary-hover); }
   gap: 12px;
   padding: 10px 10px 10px 12px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--float-bg);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 40px -14px rgba(22, 23, 27, 0.35);
@@ -643,13 +715,13 @@ a:hover { color: var(--primary-hover); }
   padding: 0 22px;
   border-radius: 999px;
   background: var(--primary);
-  color: #FFFFFF;
+  color: var(--on-primary);
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.02em;
   text-decoration: none;
 }
-.sticky-bar__cta:hover { background: var(--primary-hover); color: #FFFFFF; }
+.sticky-bar__cta:hover { background: var(--primary-hover); color: var(--on-primary); }
 
 /* site.js adds .js to <html>, then toggles .is-hidden */
 .js .sticky-bar.is-hidden {
@@ -851,7 +923,7 @@ a:hover { color: var(--primary-hover); }
 .wtm__badge {
   padding: 6px 10px;
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--ink-panel);
   color: #FFFFFF;
   font-size: 12px;
   font-weight: 600;
@@ -928,7 +1000,7 @@ a:hover { color: var(--primary-hover); }
 .wtm-card--ink {
   margin-top: 16px;
   gap: 14px;
-  background: var(--ink);
+  background: var(--ink-panel);
   border-color: transparent;
   color: #FFFFFF;
 }
@@ -966,6 +1038,8 @@ a:hover { color: var(--primary-hover); }
   .brand__icon { width: 32px; height: 32px; border-radius: 8px; }
   .brand__name { font-size: 20px; }
   .site-nav--desktop { display: none; }
+  .site-header__phone-tools { display: flex; }
+  .nav-account { display: flex; }
   .nav-menu { display: block; }
 
   .sticky-bar { display: flex; }
@@ -1075,3 +1149,6 @@ a:hover { color: var(--primary-hover); }
   html { scroll-behavior: auto; }
   .sticky-bar, .faq-item summary::after { transition: none; }
 }
+
+/* Dark theme: the decorative waves are pastel, so tone them down on charcoal */
+:root[data-theme="dark"] body::before { opacity: 0.16; }

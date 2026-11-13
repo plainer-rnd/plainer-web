@@ -1,9 +1,12 @@
 # Plainer website
 
-Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, no build step, no npm. Hosted on Cloudflare Pages.
+Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, no build step. Deployed from this repo to Netlify (`netlify.toml` copies the site into `build/`). `package.json` is dev-only test tooling and is not deployed.
 
 - `index.html`, `support/`, `wtm/`, `policy/`, `404.html`: pages (folder-per-page for clean URLs)
-- `css/site.css`: design tokens (`:root`) plus one block per component
+- `css/site.css`: design tokens (`:root`, light and `:root[data-theme="dark"]`) plus one block per component
+- `css/app.css`: styles for the signed-in area and the login/sign-up pages (same palette, `.pl` scope)
+- `login/`, `signup/` (and later `trips/`, `trip/`, `profile/`): the personal area, vanilla ES modules in `js/`
+- `js/config.js`: Dev/Prod config picked by hostname; `js/firebase.js`: Firebase Auth and session helpers; `js/theme.js`: theme toggle
 - `js/site.js`: optional enhancement (copy email, menu close, sticky download bar). Pages work without it
 - `assets/`: images (WebP + JPG at 400/800 px), icons, OG image, QR code
 - `_redirects`, `_headers`: Cloudflare Pages config
@@ -71,3 +74,10 @@ Use the preview URL first, then the real domain, on an iPhone in a private tab:
 - Replace `PROVIDER_TOKEN` in every App Store link (`grep -r PROVIDER_TOKEN .`) and regenerate `assets/qr-app-store.svg` with the `ct=web_qr` link.
 - Fill the `[CONFIRM STEPS …]` FAQ answers on `/support/`.
 - Confirm the "no data collected" claim still holds now that the app has sign-in.
+
+## Personal area: environments and tests
+
+- **Dev vs Prod:** `js/config.js` picks the Firebase web config and backend URL by `location.hostname`. `plainer.co.uk` and `www.plainer.co.uk` are Prod; anything else (Netlify deploy previews, localhost) is Dev. Firebase web config values are public identifiers. Add every Dev preview domain to the Dev Firebase project's Authorized domains.
+- **Theme:** every page sets `data-theme` on `<html>` from an inline script in `<head>` (localStorage `plainerTheme`, else the OS setting). Keep that script identical on all pages.
+- **Signed-in hint:** `js/firebase.js` stores `localStorage.plainerSignedIn`; `js/site.js` uses it to show "My trips" in the public header without loading Firebase. Protected pages always check the real session.
+- **Tests:** `npm install && npx playwright install chromium`, then `npm test`. Unit tests use Node's test runner; E2E tests replace `config.js` and the Firebase CDN modules with fakes, so they need no network or credentials.

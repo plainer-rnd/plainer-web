@@ -3,4 +3,4 @@
 # already configured to publish).
 [build]
   publish = "build"
-  command = "mkdir -p build && tar --exclude=./build --exclude=./.git --exclude=./.wrangler --exclude=./README.md --exclude=./netlify.toml --exclude=.DS_Store -cf - . | tar -xf - -C build"
+  command = "mkdir -p build && tar --exclude=./build --exclude=./.git --exclude=./.wrangler --exclude=./README.md --exclude=./netlify.toml --exclude=.DS_Store --exclude=./node_modules --exclude=./tests --exclude=./docs --exclude=./package.json --exclude=./package-lock.json --exclude=./playwright.config.js --exclude=./test-results --exclude=./playwright-report --exclude=./personal-area-handover -cf - . | tar -xf - -C build"
