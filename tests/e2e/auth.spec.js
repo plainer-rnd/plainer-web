@@ -3,7 +3,7 @@ const { installFakeFirebase, fakeCalls } = require('./fake-firebase');
 
 test.beforeEach(async ({ page }) => {
   await installFakeFirebase(page);
-  // /trips/ does not exist until stage 2; a stub lets redirects land somewhere.
+  // These tests are about auth only, so the redirect targets are stubbed.
   await page.route('**/trips/', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Trips</title>' }));
   await page.route('**/trip/?id=*', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Trip</title>' }));
 });
