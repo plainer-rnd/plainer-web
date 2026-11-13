@@ -5,7 +5,7 @@ Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, 
 - `index.html`, `support/`, `wtm/`, `policy/`, `404.html`: pages (folder-per-page for clean URLs)
 - `css/site.css`: design tokens (`:root`, light and `:root[data-theme="dark"]`) plus one block per component
 - `css/app.css`: styles for the signed-in area and the login/sign-up pages (same palette, `.pl` scope)
-- `login/`, `signup/` (and later `trips/`, `trip/`, `profile/`): the personal area, vanilla ES modules in `js/`
+- `login/`, `signup/`, `trips/`, `profile/` (and later `trip/`): the personal area, vanilla ES modules in `js/`
 - `js/config.js`: Dev/Prod config picked by hostname; `js/firebase.js`: Firebase Auth and session helpers; `js/theme.js`: theme toggle
 - `js/site.js`: optional enhancement (copy email, menu close, sticky download bar). Pages work without it
 - `assets/`: images (WebP + JPG at 400/800 px), icons, OG image, QR code
@@ -80,4 +80,6 @@ Use the preview URL first, then the real domain, on an iPhone in a private tab:
 - **Dev vs Prod:** `js/config.js` picks the Firebase web config and backend URL by `location.hostname`. `plainer.co.uk` and `www.plainer.co.uk` are Prod; anything else (Netlify deploy previews, localhost) is Dev. Firebase web config values are public identifiers. Add every Dev preview domain to the Dev Firebase project's Authorized domains.
 - **Theme:** every page sets `data-theme` on `<html>` from an inline script in `<head>` (localStorage `plainerTheme`, else the OS setting). Keep that script identical on all pages.
 - **Signed-in hint:** `js/firebase.js` stores `localStorage.plainerSignedIn`; `js/site.js` uses it to show "My trips" in the public header without loading Firebase. Protected pages always check the real session.
+- **Backend API:** `js/api.js` calls `plainer-trips-server` (`config.apiBaseUrl` + `/api/...`) with the Firebase ID token as Bearer. The server must allow the web origin through its `Cors:AllowedOrigins` setting (Netlify previews: `https://*--plainer.netlify.app`).
+- **Pure logic:** `js/trips-model.js` (status, filtering, labels) mirrors the iOS app's `TripInfoModel`. Trips have no end date, so there is no "Past" status.
 - **Tests:** `npm install && npx playwright install chromium`, then `npm test`. Unit tests use Node's test runner; E2E tests replace `config.js` and the Firebase CDN modules with fakes, so they need no network or credentials.

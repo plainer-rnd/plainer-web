@@ -1,11 +1,16 @@
 // Replaces config.js and the Firebase CDN modules so the E2E tests need no network or credentials.
-const FAKE_CONFIG = `export const config = { name: 'test', firebase: { apiKey: 'test', authDomain: 'test' }, apiBaseUrl: 'http://localhost:4173/api' };`;
+const FAKE_CONFIG = `export const config = { name: 'test', firebase: { apiKey: 'test', authDomain: 'test' }, apiBaseUrl: 'https://api.test' };`;
 
 const FAKE_APP = `export const initializeApp = () => ({});`;
 
 const FAKE_AUTH = `
 const KEY = 'fakeUser';
-const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch (e) { return null; } };
+const read = () => {
+  try {
+    const u = JSON.parse(sessionStorage.getItem(KEY));
+    return u && { ...u, emailVerified: u.emailVerified !== false, getIdToken: async () => sessionStorage.getItem('fakeToken') || 'fake-token' };
+  } catch (e) { return null; }
+};
 const write = (u) => (u ? sessionStorage.setItem(KEY, JSON.stringify(u)) : sessionStorage.removeItem(KEY));
 const log = (name, arg) => { const calls = JSON.parse(sessionStorage.getItem('fakeCalls') || '[]'); calls.push([name, arg]); sessionStorage.setItem('fakeCalls', JSON.stringify(calls)); };
 const fail = (code) => Promise.reject(Object.assign(new Error(code), { code }));
@@ -22,6 +27,7 @@ export const createUserWithEmailAndPassword = async (auth, email) => {
 export const updateProfile = async (user, p) => { log('updateProfile', p); write({ ...user, ...p }); };
 export const sendEmailVerification = async () => { log('sendEmailVerification'); };
 export const sendPasswordResetEmail = async (auth, email) => { log('sendPasswordResetEmail', email); };
+export const reload = async () => {};
 export const signOut = async () => write(null);
 `;
 

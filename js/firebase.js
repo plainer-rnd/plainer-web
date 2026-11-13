@@ -8,6 +8,7 @@ import {
   updateProfile,
   sendEmailVerification,
   sendPasswordResetEmail,
+  reload,
   signOut as firebaseSignOut,
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { config } from './config.js';
@@ -76,6 +77,11 @@ export function resetPassword(email) {
 
 export function resendVerification(user) {
   return sendEmailVerification(user);
+}
+
+// Re-reads the account from Firebase (e.g. after the user confirmed their email in another tab).
+export function refreshUser(user) {
+  return reload(user);
 }
 
 export async function signOut() {
