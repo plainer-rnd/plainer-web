@@ -14,8 +14,8 @@ const environments = {
   dev: {
     name: 'dev',
     firebase: {
-      apiKey: 'REPLACE_DEV_FIREBASE_API_KEY',
-      authDomain: 'REPLACE_DEV_FIREBASE_AUTH_DOMAIN',
+      apiKey: 'AIzaSyCsT_JRucFXOdDtCTWrWnaVhT3HPLhckTk',
+      authDomain: 'plainer-dev.firebaseapp.com',
     },
     apiBaseUrl: 'REPLACE_DEV_API_BASE_URL',
   },
