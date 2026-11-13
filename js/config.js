@@ -9,7 +9,7 @@ const environments = {
       apiKey: 'REPLACE_PROD_FIREBASE_API_KEY',
       authDomain: 'REPLACE_PROD_FIREBASE_AUTH_DOMAIN',
     },
-    apiBaseUrl: 'REPLACE_PROD_API_BASE_URL',
+    apiBaseUrl: 'https://plainer-trips-prod-537949589654.europe-west1.run.app',
   },
   dev: {
     name: 'dev',
@@ -17,7 +17,7 @@ const environments = {
       apiKey: 'AIzaSyCsT_JRucFXOdDtCTWrWnaVhT3HPLhckTk',
       authDomain: 'plainer-dev.firebaseapp.com',
     },
-    apiBaseUrl: 'REPLACE_DEV_API_BASE_URL',
+    apiBaseUrl: 'https://plainer-trips-537949589654.europe-west1.run.app',
   },
 };
 
