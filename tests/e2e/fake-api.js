@@ -54,6 +54,8 @@ async function signIn(page, user = { email: 'olena@example.com', displayName: 'O
 // options: trips, sharedBy, profile, tripsStatus (HTTP status for GET trips), requests (array that collects calls)
 async function mockApi(page, options = {}) {
   const trips = options.trips || sampleTrips;
+  const details = options.details || JSON.parse(JSON.stringify(sampleDetails));
+  let nextId = 900;
   const sharedBy = options.sharedBy || [{ tripId: 2, shares: [{ sharedWith: 'a@x.co', shareId: 1 }, { sharedWith: 'b@x.co', shareId: 2 }] }];
   const profile = options.profile || { email: 'olena@example.com', displayName: 'Olena From API' };
   await page.route('https://api.test/api/**', async (route) => {
@@ -66,6 +68,45 @@ async function mockApi(page, options = {}) {
       ? json(options.tripsStatus, { error: 'boom' })
       : json(200, { requestId: 'r', result: trips });
     if (url.pathname === '/api/trip-shares/by') return json(200, { requestId: 'r', result: sharedBy });
+    if (url.pathname.endsWith('/locations') && request.method() === 'GET') {
+      return json(200, { requestId: 'r', result: { sessionToken: 'tok', locations: [{ id: 'g-Stavanger', mainText: 'Stavanger', secondaryText: 'Norway' }] } });
+    }
+    const structure = url.pathname.match(/^\/api\/trips\/(\d+)\/(days|route-stops)(?:\/(\d+|reorder))?$/);
+    if (structure && request.method() !== 'GET' && !options.writeStatus && details[structure[1]]) {
+      const detail = details[structure[1]];
+      const list = structure[2] === 'days' ? detail.days : detail.stops;
+      const body = request.postData() ? JSON.parse(request.postData()) : {};
+      const byOrder = () => [...list].sort((a, b) => a.order - b.order);
+      const renumber = (items) => items.forEach((item, index) => { item.order = index; });
+      if (request.method() === 'DELETE') {
+        const index = list.findIndex((item) => String(item.id) === structure[3]);
+        list.splice(index, 1);
+        if (structure[2] === 'route-stops') detail.days = detail.days.filter((d) => String(d.routeStopId) !== structure[3]);
+        renumber(byOrder());
+      } else if (request.method() === 'POST' && structure[3] === 'reorder') {
+        body.orderedStopIds.forEach((id, index) => { list.find((item) => item.id === id).order = index; });
+      } else if (request.method() === 'POST') {
+        const created = structure[2] === 'days'
+          ? { id: ++nextId, tripId: 1, routeStopId: body.routeStopId, order: body.order, title: body.title, description: body.description }
+          : { id: ++nextId, tripId: 1, order: body.order, distance: 0, location: place(body.locationId.replace('g-', '')), plannedDays: 1 };
+        const items = byOrder();
+        items.splice(body.order, 0, created);
+        list.push(created);
+        renumber(items);
+        options.requests?.length;
+        return json(201, { requestId: 'r', result: created });
+      } else if (request.method() === 'PUT' && body.order !== undefined) {
+        const item = list.find((i) => String(i.id) === structure[3]);
+        const items = byOrder().filter((i) => i !== item);
+        items.splice(body.order, 0, item);
+        renumber(items);
+      }
+      return json(200, { requestId: 'r', result: {} });
+    }
+    if (request.method() === 'POST' && /\/(days|route-stops|trips)$/.test(url.pathname)) {
+      const created = { id: 900, ...(request.postData() ? JSON.parse(request.postData()) : {}) };
+      if (!options.writeStatus) return json(201, { requestId: 'r', result: created });
+    }
     if (request.method() !== 'GET') {
       if (options.writeStatus) return json(options.writeStatus, { error: 'boom' });
       if (/\/clone$/.test(url.pathname)) return json(201, { requestId: 'r', result: { id: 77, name: 'Copy' } });
@@ -73,7 +114,7 @@ async function mockApi(page, options = {}) {
     }
     const tripPath = url.pathname.match(/^\/api\/trips\/(\d+)(\/[a-z-]+)?$/);
     if (tripPath) {
-      const detail = (options.details || sampleDetails)[tripPath[1]];
+      const detail = details[tripPath[1]];
       if (options.detailStatus) return json(options.detailStatus, { error: 'no' });
       if (!detail) return json(404, { error: 'not found' });
       const part = tripPath[2];

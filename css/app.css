@@ -337,7 +337,7 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .stop-edit+.stop-row,.pl .stop-row+.stop-edit{border-top:1.5px solid var(--green)}
 .pl .stop-edit-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
 .pl .stop-edit-fields{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.pl .stop-edit-actions{display:flex;justify-content:flex-end}
+.pl .stop-edit-actions{display:flex;flex-wrap:wrap;gap:6px}
 .pl .day-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pl .day-title{font-weight:600;font-size:16px;overflow-wrap:anywhere}
 .pl .small{font-size:13px}
@@ -396,3 +396,20 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .stop-edit .stepper span{min-width:28px}
 .pl .stop-edit .transport-select{padding:0 6px;min-width:0}
 @media (max-width:720px){.pl .stop-edit{gap:8px;padding:10px;margin:4px}.pl .stop-edit .num{width:28px;height:28px;font-size:13px}.pl .stop-edit .stepper span{min-width:22px}.pl .stop-edit-fields{gap:6px}.pl .stop-edit .transport-select{width:84px}}
+
+/* Structure editing */
+.pl .col-head .muted{flex:1}
+.pl .ghead b{flex:1}
+.pl .add{font:inherit;font-size:20px;font-weight:700;line-height:1}
+.pl .action-btn{min-height:36px;padding:0 12px;border:1px solid var(--line2);border-radius:999px;background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pl .action-btn:hover:not(:disabled){background:var(--field)}
+.pl .action-btn:disabled{opacity:.4;cursor:not-allowed}
+.pl .action-btn.danger{color:var(--danger);border-color:var(--danger)}
+.pl .day-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pl .stop-edit-name{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pl .picker-input{width:100%;min-height:44px;margin:8px 0;padding:0 12px;border:1.5px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit}
+.pl .picker-input:focus{outline:none;border-color:var(--green)}
+.pl .picker-list{list-style:none;margin:0;padding:0;max-height:280px;overflow:auto}
+.pl .picker-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:48px;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.pl .picker-item:hover,.pl .picker-item:focus-visible{background:var(--mint2)}
+@media (max-width:720px){.pl .action-btn{min-height:44px}.pl .add{width:44px;height:44px}}

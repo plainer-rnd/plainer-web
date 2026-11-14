@@ -168,3 +168,43 @@ export function dateToApi(date) {
 }
 
 export const TRANSPORT_TYPES = ['Flight', 'Car', 'Train', 'Bus', 'Ferry', 'Cruise', 'Bicycle', 'Hiking'];
+
+// ---- structure helpers (add / move / remove) ----
+// Days are ordered across the whole trip: a day's "order" is its 0-based index in that single list, and the
+// stops' days sit one after another in route order. So adding a day at the end of a stop means inserting it
+// at the index right after that stop's last day.
+
+export function insertIndexForStop(groups, stopId) {
+  let count = 0;
+  for (const group of groups) {
+    count += group.days.length;
+    if (group.stop.id === stopId) return count;
+  }
+  return count;
+}
+
+// New global index for a day moved one place up (-1) or down (+1) inside its own stop, or null at the edge.
+export function dayMoveIndex(groups, day, direction) {
+  const group = groups.find((g) => g.days.includes(day));
+  if (!group) return null;
+  const neighbour = group.days[group.days.indexOf(day) + direction];
+  return neighbour ? neighbour.number - 1 : null;
+}
+
+// Stop ids in their new order after moving one stop up (-1) or down (+1), or null at the edge.
+export function stopMoveIds(stops, stopId, direction) {
+  const ids = [...stops].sort((a, b) => a.order - b.order).map((stop) => stop.id);
+  const from = ids.indexOf(stopId);
+  const to = from + direction;
+  if (from < 0 || to < 0 || to >= ids.length) return null;
+  [ids[from], ids[to]] = [ids[to], ids[from]];
+  return ids;
+}
+
+export function duplicateDayBody(day, order) {
+  return { routeStopId: day.stopId, order, title: day.title || null, description: linesToHtml(day.plan) };
+}
+
+export function newTripBody(name, startDate) {
+  return { name, startDate: startDate ? dateToApi(startDate) : '0001-01-01T00:00:00Z', description: null, isDraft: true };
+}

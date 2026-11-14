@@ -6,10 +6,12 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
+  insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
 import { createSaveQueue } from './save-queue.js';
+import { confirmDialog, openDialog } from './dialogs.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -52,10 +54,10 @@ const nodes = {
   saveRetry: document.getElementById('save-retry'),
   live: document.getElementById('trip-status-live'),
   readonlyNote: document.getElementById('readonly-note'),
+  addStop: document.getElementById('add-stop'),
   menuWrap: document.getElementById('trip-menu-wrap'),
   menuButton: document.getElementById('trip-menu-button'),
   menu: document.getElementById('trip-menu'),
-  confirm: document.getElementById('confirm'),
 };
 
 // ---- autosave ----
@@ -207,9 +209,31 @@ function dayRow(day) {
       : day.plan.length
         ? day.plan.map((line) => el('p', { class: 't2', text: line }))
         : [el('p', { class: 'muted', text: 'Nothing planned for this day yet.' })];
-    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan]));
+    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan, canEdit() ? dayActions(day) : null]));
   }
   return el('div', {}, parts);
+}
+
+function iconButton(text, label, handler) {
+  const button = el('button', { type: 'button', class: 'add', 'aria-label': label, text });
+  button.addEventListener('click', handler);
+  return button;
+}
+
+function actionButton(text, label, handler, { disabled = false, danger = false } = {}) {
+  const button = el('button', { type: 'button', class: `action-btn${danger ? ' danger' : ''}`, 'aria-label': label, text });
+  button.disabled = disabled;
+  button.addEventListener('click', handler);
+  return button;
+}
+
+function dayActions(day) {
+  return el('div', { class: 'day-actions', role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
+    actionButton('↑ Move up', `Move day ${day.number} up`, () => moveDay(day, -1), { disabled: dayMoveIndex(state.groups, day, -1) === null }),
+    actionButton('↓ Move down', `Move day ${day.number} down`, () => moveDay(day, 1), { disabled: dayMoveIndex(state.groups, day, 1) === null }),
+    actionButton('Duplicate', `Duplicate day ${day.number}`, () => duplicateDay(day)),
+    actionButton('Delete', `Delete day ${day.number}`, () => deleteDay(day), { danger: true }),
+  ]);
 }
 
 function renderDays() {
@@ -218,7 +242,10 @@ function renderDays() {
       ? group.days.map(dayRow)
       : [el('p', { class: 'muted empty-note', text: 'No days planned yet.' })];
     return el('div', { class: 'group' }, [
-      el('div', { class: 'ghead' }, el('b', { text: `${group.stop.name} · ${plural(group.days.length, 'day')}` })),
+      el('div', { class: 'ghead' }, [
+        el('b', { text: `${group.stop.name} · ${plural(group.days.length, 'day')}` }),
+        canEdit() && group.stop.id !== null ? iconButton('+', `Add a day to ${group.stop.name}`, () => addDay(group.stop)) : null,
+      ]),
       ...body,
     ]);
   });
@@ -267,7 +294,7 @@ function closeStopEditor({ restoreFocus = true } = {}) {
 // (Clicks on another stop's row are left to that row, which opens it.)
 document.addEventListener('click', (event) => {
   if (state.editingStop === null) return;
-  if (event.target.closest('.stop-edit, [data-stop-open]')) return;
+  if (event.target.closest('.stop-edit, [data-stop-open], dialog')) return;
   closeStopEditor({ restoreFocus: false });
 });
 
@@ -280,10 +307,18 @@ function stopRow(group, index) {
     const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
       el('div', { class: 'stop-edit-body' }, [
-        el('span', { class: 'day-title', text: stop.name }),
+        el('div', { class: 'stop-edit-name' }, [
+          el('span', { class: 'day-title', text: stop.name }),
+          actionButton('Change place', `Change place for ${stop.name}`, () => changePlace(stop)),
+        ]),
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
+        ]),
+        el('div', { class: 'stop-edit-actions', role: 'group', 'aria-label': `Actions for ${stop.name}` }, [
+          actionButton('↑ Move up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
+          actionButton('↓ Move down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
+          actionButton('Remove', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
         ]),
       ]),
     ]);
@@ -372,6 +407,7 @@ function render() {
   renderPanes();
   nodes.daysSub.textContent = `· ${plural(state.days.filter(hasPlan).length, 'day')} with a plan`;
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
+  nodes.addStop.hidden = !canEdit();
 }
 
 function showMessage(title, text, action, role) {
@@ -418,6 +454,161 @@ async function load(api, id) {
   if (first && !state.expandedInit) { state.expanded.add(first.id); state.expandedInit = true; }
 }
 
+// ---- structure: add, move, remove, duplicate ----
+
+function rebuild() {
+  state.groups = buildItinerary(state.stops, state.days);
+}
+
+async function reloadLists() {
+  const [stops, days] = await Promise.all([
+    state.api.get(`trips/${state.id}/route-stops`),
+    state.api.get(`trips/${state.id}/days`),
+  ]);
+  state.stops = (stops || []).map(stopFromDto);
+  state.days = (days || []).map(dayFromDto);
+  rebuild();
+}
+
+// Structure changes are sent one after another (they depend on each other's positions), then the lists are
+// read back so the screen shows exactly what the server has. A failure also reads them back.
+function structure({ apply = () => {}, send }) {
+  save({
+    key: 'structure',
+    apply,
+    send: async () => { await send(); await reloadLists(); render(); },
+    revert: () => { reloadLists().then(render).catch(() => {}); },
+  });
+}
+
+function flash(text) {
+  nodes.live.textContent = text;
+}
+
+function addDay(stop) {
+  structure({
+    send: async () => {
+      const created = await state.api.post(`trips/${state.id}/days?style=Insert`, {
+        routeStopId: stop.id, order: insertIndexForStop(state.groups, stop.id), title: null, description: '',
+      });
+      state.expanded.add(created.id);
+    },
+  });
+}
+
+// The copy goes right after the original, inside the same stop.
+function duplicateDay(day) {
+  structure({
+    send: async () => {
+      const copy = await state.api.post(`trips/${state.id}/days?style=Insert`, duplicateDayBody(day, day.number));
+      state.expanded.add(copy.id);
+    },
+  });
+}
+
+function moveDay(day, direction) {
+  const order = dayMoveIndex(state.groups, day, direction);
+  if (order === null) return;
+  structure({ send: () => state.api.put(`trips/${state.id}/days/${day.id}`, { order }) });
+}
+
+function deleteDay(day) {
+  confirmAction({
+    title: `Delete day ${day.number}?`,
+    text: `“${day.title || `Day ${day.number}`}” and its plan will be deleted.`,
+    okLabel: 'Delete day',
+    run: () => new Promise((resolve) => {
+      structure({
+        apply: () => { state.days = state.days.filter((d) => d.id !== day.id); rebuild(); },
+        send: () => state.api.delete(`trips/${state.id}/days/${day.id}`),
+      });
+      resolve();
+    }),
+  });
+}
+
+function moveStop(stop, direction) {
+  const ids = stopMoveIds(state.stops, stop.id, direction);
+  if (!ids) return;
+  structure({ send: () => state.api.post(`trips/${state.id}/route-stops/reorder`, { orderedStopIds: ids }) });
+}
+
+function removeStop(stop, dayCount) {
+  confirmAction({
+    title: `Remove ${stop.name}?`,
+    text: dayCount ? `${stop.name} and its ${plural(dayCount, 'day')} will be removed.` : `${stop.name} will be removed from the route.`,
+    okLabel: 'Remove stop',
+    run: () => new Promise((resolve) => {
+      if (state.editingStop === stop.id) state.editingStop = null;
+      structure({
+        apply: () => { state.stops = state.stops.filter((s) => s.id !== stop.id); state.days = state.days.filter((d) => d.stopId !== stop.id); rebuild(); },
+        send: () => state.api.delete(`trips/${state.id}/route-stops/${stop.id}`),
+      });
+      resolve();
+    }),
+  });
+}
+
+// Place search for adding a stop or changing which place a stop is at. Resolves with the chosen place id, or null.
+function pickPlace(title) {
+  return new Promise((resolve) => {
+    let sessionToken = null;
+    let sequence = 0;
+    let timer = null;
+    let chosen = null;
+    const input = el('input', { type: 'search', class: 'picker-input', placeholder: 'Search for a city or place', 'aria-label': 'Place', autocomplete: 'off' });
+    const status = el('p', { class: 'muted small', role: 'status', 'aria-live': 'polite' });
+    const list = el('ul', { class: 'picker-list' });
+    const cancel = el('button', { type: 'button', class: 'btn btn-outline', text: 'Cancel' });
+    const { dialog, close } = openDialog({ title, content: [input, status, list, el('div', { class: 'dialog-actions' }, cancel)] });
+    cancel.addEventListener('click', close);
+    dialog.addEventListener('close', () => resolve(chosen));
+
+    async function search() {
+      const description = input.value.trim();
+      const mine = ++sequence;
+      if (description.length < 2) { list.replaceChildren(); status.textContent = ''; return; }
+      status.textContent = 'Searching…';
+      try {
+        const found = await state.api.get(`trips/${state.id}/locations`, sessionToken ? { description, sessionToken } : { description });
+        if (mine !== sequence) return;
+        sessionToken = found.sessionToken || sessionToken;
+        const places = found.locations || [];
+        status.textContent = places.length ? '' : 'No places found. Try another spelling.';
+        list.replaceChildren(...places.map((place) => {
+          const choose = el('button', { type: 'button', class: 'picker-item' }, [
+            el('span', { class: 'day-title', text: place.mainText }),
+            el('span', { class: 'muted small', text: place.secondaryText || '' }),
+          ]);
+          choose.addEventListener('click', () => { chosen = place.id; close(); });
+          return el('li', {}, choose);
+        }));
+      } catch (error) {
+        if (mine === sequence) status.textContent = 'Couldn’t search right now. Try again.';
+      }
+    }
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
+    input.focus();
+  });
+}
+
+async function addStop() {
+  const locationId = await pickPlace('Add a stop');
+  if (!locationId) return;
+  structure({
+    send: async () => {
+      const created = await state.api.post(`trips/${state.id}/route-stops`, { order: state.stops.length, locationId });
+      state.editingStop = created.id;
+    },
+  });
+}
+
+async function changePlace(stop) {
+  const locationId = await pickPlace(`Change place for ${stop.name}`);
+  if (!locationId) return;
+  structure({ send: () => state.api.put(`trips/${state.id}/route-stops/${stop.id}`, { locationId }) });
+}
+
 // ---- trip actions (⋯ menu) ----
 
 function setMenuOpen(open) {
@@ -433,28 +624,7 @@ function flashError(text) {
   nodes.live.textContent = text;
 }
 
-function confirmAction({ title, text, okLabel, run }) {
-  const ok = document.getElementById('confirm-ok');
-  const error = document.getElementById('confirm-error');
-  document.getElementById('confirm-title').textContent = title;
-  document.getElementById('confirm-text').textContent = text;
-  ok.textContent = okLabel;
-  ok.disabled = false;
-  error.hidden = true;
-  ok.onclick = async () => {
-    ok.disabled = true;
-    try {
-      await run();
-    } catch (failure) {
-      error.textContent = 'That didn’t work. Please try again.';
-      error.hidden = false;
-      ok.disabled = false;
-    }
-  };
-  nodes.confirm.showModal();
-}
-
-document.getElementById('confirm-cancel').addEventListener('click', () => nodes.confirm.close());
+const confirmAction = confirmDialog;
 
 async function duplicateTrip() {
   try {
@@ -500,6 +670,8 @@ function renderMenu() {
     : [item('Leave trip…', leaveTrip, 'danger')]));
 }
 
+nodes.addStop.addEventListener('click', addStop);
+
 nodes.menuButton.addEventListener('click', () => {
   const open = nodes.menu.hidden;
   setMenuOpen(open);
@@ -518,7 +690,7 @@ document.addEventListener('keydown', (event) => {
 
 async function refreshWhenIdle() {
   const editing = document.activeElement && document.activeElement.classList.contains('inline-input');
-  if (document.hidden || queue.isBusy() || queue.status() === 'error' || editing || !state.trip || nodes.confirm.open) return;
+  if (document.hidden || queue.isBusy() || queue.status() === 'error' || editing || !state.trip  || document.querySelector('dialog[open]')) return;
   try {
     await load(state.api, state.id);
     if (!queue.isBusy()) render();
