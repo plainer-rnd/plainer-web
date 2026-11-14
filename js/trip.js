@@ -254,13 +254,22 @@ function transportSelect(stop) {
 
 const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"></path>';
 
-function closeStopEditor() {
+function closeStopEditor({ restoreFocus = true } = {}) {
   const id = state.editingStop;
+  if (id === null) return;
   state.editingStop = null;
   render();
-  const opener = id === null ? null : document.querySelector(`[data-stop-open="${id}"]`);
+  const opener = restoreFocus ? document.querySelector(`[data-stop-open="${id}"]`) : null;
   if (opener) opener.focus();
 }
+
+// Changes are already saved, so there is no Done button: a click or tap anywhere outside the open stop closes it.
+// (Clicks on another stop's row are left to that row, which opens it.)
+document.addEventListener('click', (event) => {
+  if (state.editingStop === null) return;
+  if (event.target.closest('.stop-edit, [data-stop-open]')) return;
+  closeStopEditor({ restoreFocus: false });
+});
 
 // One compact row per stop. Opening a stop turns just that row into an editor; only one is open at a time.
 function stopRow(group, index) {
@@ -268,8 +277,6 @@ function stopRow(group, index) {
   const number = el('span', { class: 'num', text: String(index + 1) });
 
   if (canEdit() && state.editingStop === stop.id) {
-    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm done-btn', 'aria-label': 'Done', title: 'Done', text: '✓' });
-    done.addEventListener('click', closeStopEditor);
     const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
       el('div', { class: 'stop-edit-body' }, [
@@ -277,7 +284,6 @@ function stopRow(group, index) {
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
-          done,
         ]),
       ]),
     ]);

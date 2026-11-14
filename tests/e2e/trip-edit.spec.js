@@ -87,7 +87,7 @@ test('planned days and transport are saved on the stop', async ({ page }) => {
   await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
   await page.getByRole('button', { name: 'More planned days for Oslo' }).click();
   await page.getByLabel('Getting to Oslo').selectOption('Cruise');
-  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('heading', { name: 'Route' }).click();
   await expect(page.locator('#route-list .stop-row').first()).toContainText('Planned: 3');
   await expect(page.locator('#route-list .stop-row').first()).toContainText('Cruise');
   await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
@@ -199,6 +199,21 @@ test('stops are compact rows; only one opens for editing at a time', async ({ pa
   await page.keyboard.press('Escape');
   await expect(page.locator('.stop-edit')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Edit stop Bergen' })).toBeFocused();
+});
+
+test('there is no Done button: clicking outside the open stop closes it', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
+  await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0);
+
+  // Clicks inside the editor keep it open
+  await page.getByRole('button', { name: 'More planned days for Oslo' }).click();
+  await expect(page.locator('.stop-edit')).toHaveCount(1);
+
+  await page.getByRole('heading', { name: 'Days' }).click();
+  await expect(page.locator('.stop-edit')).toHaveCount(0);
+  await expect(page.locator('#route-list')).toContainText('Planned: 3');
 });
 
 test.describe('phone', () => {

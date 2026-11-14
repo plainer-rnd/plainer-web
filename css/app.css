@@ -392,7 +392,6 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .stop-edit-fields{align-items:flex-end;gap:12px}
 .pl .edit-field{display:flex;flex-direction:column;gap:4px}
 .pl .edit-field .field-label{margin:0;font-size:12px;font-weight:600;color:var(--t3)}
-.pl .stop-edit-fields .done-btn{margin-left:auto;min-width:44px;font-size:20px;font-weight:700;line-height:1;padding:0 12px}
 .pl .stop-edit-fields{gap:8px}
 .pl .stop-edit .stepper span{min-width:28px}
 .pl .stop-edit .transport-select{padding:0 6px;min-width:0}
