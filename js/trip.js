@@ -6,13 +6,15 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
-  pdfFileName, insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
+  pdfFileName, insertIndexForStop, duplicateDayBody, stopDropIds, dayDropOrder,
+  daysBeforeStop, generatedDaysBody,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
 import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
+import { openGenerateDaysDialog } from './ai-days-dialog.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -200,6 +202,7 @@ function dayRow(day) {
       date ? el('span', { class: 'muted small', text: date }) : null,
       !open && preview ? el('span', { class: 'muted small clamp1', text: preview }) : null,
     ]),
+    canEdit() ? dayActions(day, open) : null,
     toggle,
   ]);
 
@@ -216,7 +219,7 @@ function dayRow(day) {
       : day.plan.length
         ? day.plan.map((line) => el('p', { class: 't2', text: line }))
         : [el('p', { class: 'muted', text: 'Nothing planned for this day yet.' })];
-    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan, canEdit() ? dayActions(day) : null]));
+    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan]));
   }
   return el('div', {}, parts);
 }
@@ -231,6 +234,7 @@ const ICONS = {
   up: '<path d="M12 19V5M5 12l7-7 7 7"></path>',
   down: '<path d="M12 5v14M5 12l7 7 7-7"></path>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"></path>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>',
 };
 
@@ -245,10 +249,10 @@ function actionButton(icon, label, handler, { disabled = false, danger = false }
   return button;
 }
 
-function dayActions(day) {
-  return el('div', { class: 'day-actions', role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
-    actionButton('up', `Move day ${day.number} up`, () => moveDay(day, -1), { disabled: dayMoveIndex(state.groups, day, -1) === null }),
-    actionButton('down', `Move day ${day.number} down`, () => moveDay(day, 1), { disabled: dayMoveIndex(state.groups, day, 1) === null }),
+// Duplicate and Delete sit in the day's header row, next to Expand/Collapse: always visible on an open day,
+// otherwise only on mouse over or keyboard focus (days are reordered by dragging).
+function dayActions(day, open) {
+  return el('div', { class: `day-actions${open ? ' is-open' : ''}`, role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
     actionButton('copy', `Duplicate day ${day.number}`, () => duplicateDay(day)),
     actionButton('trash', `Delete day ${day.number}`, () => deleteDay(day), { danger: true }),
   ]);
@@ -262,7 +266,12 @@ function renderDays() {
     return el('div', { class: 'group' }, [
       el('div', { class: 'ghead' }, [
         el('b', { text: `${group.stop.name} · ${plural(group.days.length, 'day')}` }),
-        canEdit() && group.stop.id !== null ? iconButton('+', `Add a day to ${group.stop.name}`, () => addDay(group.stop)) : null,
+        canEdit() && group.stop.id !== null
+          ? el('div', { class: 'ghead-actions' }, [
+            actionButton('sparkle', `Generate days with AI for ${group.stop.name}`, () => generateDays(group.stop, group)),
+            iconButton('+', `Add a day to ${group.stop.name}`, () => addDay(group.stop)),
+          ])
+          : null,
       ]),
       ...body,
     ]);
@@ -383,11 +392,7 @@ function stopRow(group, index) {
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
-        ]),
-        el('div', { class: 'stop-edit-actions', role: 'group', 'aria-label': `Actions for ${stop.name}` }, [
-          actionButton('up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
-          actionButton('down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
-          actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
+          el('span', { class: 'stop-edit-remove' }, actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true })),
         ]),
       ]),
     ]);
@@ -585,12 +590,6 @@ function duplicateDay(day) {
   });
 }
 
-function moveDay(day, direction) {
-  const order = dayMoveIndex(state.groups, day, direction);
-  if (order === null) return;
-  structure({ send: () => state.api.put(`trips/${state.id}/days/${day.id}`, { order }) });
-}
-
 function deleteDay(day) {
   confirmAction({
     title: `Delete day ${day.number}?`,
@@ -604,12 +603,6 @@ function deleteDay(day) {
       resolve();
     }),
   });
-}
-
-function moveStop(stop, direction) {
-  const ids = stopMoveIds(state.stops, stop.id, direction);
-  if (!ids) return;
-  structure({ send: () => state.api.post(`trips/${state.id}/route-stops/reorder`, { orderedStopIds: ids }) });
 }
 
 function removeStop(stop, dayCount) {
@@ -668,6 +661,28 @@ function pickPlace(title) {
     }
     input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
     input.focus();
+  });
+}
+
+function generateDays(stop, group) {
+  openGenerateDaysDialog({
+    api: state.api,
+    tripId: state.id,
+    stop,
+    existingCount: group.days.length,
+    onGenerated: (generated, mode) => structure({
+      send: async () => {
+        const current = state.groups.find((g) => g.stop.id === stop.id);
+        let order = insertIndexForStop(state.groups, stop.id);
+        if (mode === 'replace' && current) {
+          order = daysBeforeStop(state.groups, stop.id);
+          for (const day of current.days) await state.api.delete(`trips/${state.id}/days/${day.id}`);
+        }
+        const created = await state.api.post(`trips/${state.id}/days/batch`, generatedDaysBody(stop.id, order, generated));
+        (created || []).forEach((day) => state.expanded.add(day.id));
+        state.editingStop = null;
+      },
+    }),
   });
 }
 

@@ -35,14 +35,26 @@ test('duplicate a day puts the copy right after it, with the same title and plan
   expect(post.body).toEqual({ routeStopId: 11, order: 1, title: 'Historic Core', description: '<p>Akershus Fortress.</p>' });
 });
 
-test('move a day down inside its stop; the edges are disabled', async ({ page }) => {
-  const requests = [];
-  await mockApi(page, { requests });
+test('days have no move buttons; Duplicate and Delete sit in the header row and show on open days or hover', async ({ page }) => {
+  await mockApi(page);
   await page.goto('/trip/?id=1');
-  await expect(page.getByRole('button', { name: 'Move day 1 up' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Move day 1 down' }).click();
-  await expect(dayTitles(page).first()).toHaveText('Art and Culture');
-  expect(writes(requests)[0]).toMatchObject({ method: 'PUT', path: '/api/trips/1/days/101', body: { order: 1 } });
+  await expect(page.getByRole('button', { name: /^Move day/ })).toHaveCount(0);
+  const row = page.locator('.day-row').first();
+  await expect(row.getByRole('button', { name: 'Duplicate day 1' })).toBeVisible();
+  const actions = row.locator('.day-actions');
+  const opacity = (locator) => locator.evaluate((node) => getComputedStyle(node).opacity);
+  expect(await opacity(actions)).toBe('1'); // day 1 is open
+  await row.getByRole('button', { name: 'Collapse day 1' }).click();
+  await page.mouse.move(0, 0);
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('0');
+  await page.locator('.day-row').first().hover();
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('1');
+  // Keyboard users still get them: focus the row's collapse button with Tab.
+  await page.mouse.move(0, 0);
+  await page.locator('.day-row').first().getByRole('button', { name: 'Expand day 1' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('1');
 });
 
 test('delete a day asks first', async ({ page }) => {
@@ -85,15 +97,16 @@ test('cancelling the place search adds nothing', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add stop' })).toBeFocused();
 });
 
-test('move a stop up and down; the edges are disabled', async ({ page }) => {
-  const requests = [];
-  await mockApi(page, { requests });
+test('the stop editor has no move buttons; Remove sits on the same line as the controls', async ({ page }) => {
+  await mockApi(page);
   await page.goto('/trip/?id=1');
   await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
-  await page.getByRole('button', { name: 'Move Bergen up' }).click();
-  await expect(headings(page)).toHaveText(['Bergen · 1 day', 'Oslo · 2 days', 'Flåm · 0 days']);
-  expect(writes(requests)[0]).toMatchObject({ path: '/api/trips/1/route-stops/reorder', body: { orderedStopIds: [12, 11, 13] } });
-  await expect(page.getByRole('button', { name: 'Move Bergen up' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /^Move Bergen/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Generate days with AI for Bergen/ })).toHaveCount(1);
+  const row = (await page.locator('.stop-edit .stepper').boundingBox()).y;
+  const remove = await page.getByRole('button', { name: 'Remove Bergen' }).boundingBox();
+  expect(Math.abs(remove.y + remove.height / 2 - (row + 18))).toBeLessThan(30);
+  await expect(page.locator('.stop-edit .ghead, .stop-edit [aria-label="Generate days with AI for Bergen"]')).toHaveCount(0);
 });
 
 test('remove a stop confirms with its day count', async ({ page }) => {

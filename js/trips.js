@@ -7,8 +7,8 @@ import {
   tripsCountLabel, isShared,
 } from './trips-model.js';
 import { el, svg } from './dom.js';
-import { confirmDialog, openDialog } from './dialogs.js';
-import { dateToApi, importErrorMessage, importFileProblem, importOutcome, newTripBody, parseDateInput, plural } from './trip-model.js';
+import { confirmDialog, openDialog, progressDialog } from './dialogs.js';
+import { EXPRESS_EXAMPLES, EXPRESS_MAX_CHARS, aiErrorMessage, dateToApi, expressProblem, importErrorMessage, importFileProblem, importOutcome, newTripBody, parseDateInput, plural } from './trip-model.js';
 
 const VIEW_KEY = 'plainerTripsView';
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
@@ -205,6 +205,16 @@ function newTripDialog() {
   });
 }
 
+// Shown instead of opening the trip straight away when some places or days need a look.
+function showCreatedSummary(form, outcome) {
+  const lines = [el('p', { text: `“${outcome.tripName}” was added with ${plural(outcome.stopCount, 'stop')} and ${plural(outcome.dayCount, 'day')}.` })];
+  if (outcome.unresolved.length) lines.push(el('p', { class: 'muted', text: `We couldn’t find a place for: ${outcome.unresolved.join(', ')}. You can fix these in the trip.` }));
+  if (outcome.partial.length) lines.push(el('p', { class: 'muted', text: `Some days are missing for: ${outcome.partial.join(', ')}.` }));
+  const open = el('a', { class: 'btn btn-primary', href: '/trip/?id=' + encodeURIComponent(outcome.tripId), text: 'Open trip' });
+  form.replaceChildren(...lines, el('div', { class: 'dialog-actions' }, [open]));
+  open.focus();
+}
+
 function importDialog() {
   const input = el('input', { type: 'file', id: 'import-file', class: 'file-input', accept: 'application/pdf,.pdf' });
   const error = el('p', { class: 'error', role: 'alert' });
@@ -222,15 +232,6 @@ function importDialog() {
     content: [form],
   });
   cancel.addEventListener('click', close);
-
-  const showResult = (outcome) => {
-    const lines = [el('p', { text: `“${outcome.tripName}” was added with ${plural(outcome.stopCount, 'stop')} and ${plural(outcome.dayCount, 'day')}.` })];
-    if (outcome.unresolved.length) lines.push(el('p', { class: 'muted', text: `We couldn’t find a place for: ${outcome.unresolved.join(', ')}. You can fix these in the trip.` }));
-    if (outcome.partial.length) lines.push(el('p', { class: 'muted', text: `Some days are missing for: ${outcome.partial.join(', ')}.` }));
-    const open = el('a', { class: 'btn btn-primary', href: '/trip/?id=' + encodeURIComponent(outcome.tripId), text: 'Open trip' });
-    form.replaceChildren(...lines, el('div', { class: 'dialog-actions' }, [open]));
-    open.focus();
-  };
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -250,7 +251,7 @@ function importDialog() {
       if (!outcome.created) {
         error.textContent = outcome.reason;
       } else if (outcome.needsReview) {
-        showResult(outcome);
+        showCreatedSummary(form, outcome);
         return;
       } else {
         location.assign('/trip/?id=' + encodeURIComponent(outcome.tripId));
@@ -263,6 +264,63 @@ function importDialog() {
     progress.hidden = true;
     submit.disabled = false;
     input.disabled = false;
+  });
+}
+
+function planDialog(initialText = '', initialError = '') {
+  const text = el('textarea', { id: 'plan-text', class: 'picker-input plan-text', rows: '4', maxlength: String(EXPRESS_MAX_CHARS), placeholder: 'e.g. 7 days in Portugal, foodie, mostly by train' });
+  text.value = initialText;
+  const counter = el('p', { class: 'muted small plan-count', 'aria-hidden': 'true', text: `${initialText.length} / ${EXPRESS_MAX_CHARS}` });
+  const chips = el('div', { class: 'chip-row', role: 'group', 'aria-label': 'Examples' }, EXPRESS_EXAMPLES.map((example) => {
+    const chip = el('button', { type: 'button', class: 'chip', text: example });
+    chip.addEventListener('click', () => { text.value = example; counter.textContent = `${example.length} / ${EXPRESS_MAX_CHARS}`; text.focus(); });
+    return chip;
+  }));
+  const error = el('p', { class: 'error', role: 'alert', text: initialError });
+  const cancel = el('button', { type: 'button', class: 'btn btn-outline', text: 'Cancel' });
+  const submit = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Plan my trip' });
+  const form = el('form', { method: 'dialog', novalidate: true }, [
+    el('label', { class: 'label', for: 'plan-text', text: 'Describe your trip' }), text, counter, chips,
+    error,
+    el('div', { class: 'dialog-actions' }, [cancel, submit]),
+  ]);
+  const { close } = openDialog({
+    title: 'Plan with AI',
+    description: 'Tell us where, how long and what you like. AI creates a new trip with stops and a plan for each day, and you can edit all of it afterwards.',
+    content: [form],
+  });
+  cancel.addEventListener('click', close);
+  text.focus();
+  text.addEventListener('input', () => { counter.textContent = `${text.value.length} / ${EXPRESS_MAX_CHARS}`; });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const problem = expressProblem(text.value);
+    if (problem) { error.textContent = problem; text.focus(); return; }
+    const instructions = text.value.trim();
+    // The planning dialog gives way to a progress dialog; if it fails, the planning dialog comes back with the text.
+    close();
+    const waiting = progressDialog('Planning your trip…');
+    let failure = '';
+    try {
+      const outcome = importOutcome(await api.post('trips/express', { instructions }), 'We couldn’t plan a trip from that. Try describing a destination and how long you’ll stay.');
+      if (outcome.created && !outcome.needsReview) {
+        location.assign('/trip/?id=' + encodeURIComponent(outcome.tripId));
+        return;
+      }
+      waiting.close();
+      if (outcome.created) {
+        const summary = el('form', { method: 'dialog' });
+        openDialog({ title: 'Your trip is ready', content: [summary] });
+        showCreatedSummary(summary, outcome);
+        return;
+      }
+      failure = outcome.reason;
+    } catch (caught) {
+      waiting.close();
+      failure = aiErrorMessage(caught.status, caught.message);
+    }
+    planDialog(instructions, failure);
   });
 }
 
@@ -337,10 +395,12 @@ function emptyState(listIsEmpty) {
   }
   const create = el('button', { type: 'button', class: 'btn btn-primary', text: 'New trip' });
   create.addEventListener('click', newTripDialog);
+  const planAi = el('button', { type: 'button', class: 'btn btn-outline', text: 'Plan with AI' });
+  planAi.addEventListener('click', () => planDialog());
   const importPdf = el('button', { type: 'button', class: 'btn btn-outline', text: 'Import PDF' });
   importPdf.addEventListener('click', importDialog);
   const getApp = el('a', { class: 'btn btn-outline', href: APP_STORE_URL, text: 'Get the iPhone app' });
-  return stateBlock('No trips yet', 'Start a trip here, import a PDF, or plan one in the Plainer iPhone app.', el('div', { class: 'dialog-actions' }, [create, importPdf, getApp]));
+  return stateBlock('No trips yet', 'Start a trip here, plan one with AI, import a PDF, or plan one in the Plainer iPhone app.', el('div', { class: 'dialog-actions' }, [create, planAi, importPdf, getApp]));
 }
 
 function showError(error) {
@@ -457,3 +517,4 @@ start();
 
 document.getElementById('new-trip').addEventListener('click', newTripDialog);
 document.getElementById('import-pdf').addEventListener('click', importDialog);
+document.getElementById('plan-ai').addEventListener('click', () => planDialog());

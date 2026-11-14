@@ -78,6 +78,28 @@ async function mockApi(page, options = {}) {
       const created = { rejectionReason: null, tripId: 88, tripName: 'Imported Rome', routeStopCount: 2, dayCount: 4, routeStops: [{ routeStopId: 1, name: 'Rome', dayIds: [1], daysMissing: false }], unresolvedStopNames: [] };
       return json(created.rejectionReason || options.importResult?.tripId === null ? 200 : 201, { requestId: 'r', result: { ...created, ...(options.importResult || {}) } });
     }
+    if (url.pathname === '/api/trips/express' && request.method() === 'POST') {
+      if (options.expressStatus) return json(options.expressStatus, { error: { message: options.expressMessage || 'boom' } });
+      const made = { rejectionReason: null, tripId: 99, tripName: 'Portugal food trip', routeStopCount: 3, dayCount: 7, routeStops: [{ id: 1, name: 'Lisbon', dayIds: [1], daysMissing: false }], unresolvedStopNames: [] };
+      return json(made.rejectionReason || options.expressResult?.tripId === null ? 200 : 201, { requestId: 'r', result: { ...made, ...(options.expressResult || {}) } });
+    }
+    const generate = url.pathname.match(/^\/api\/trips\/(\d+)\/route-stops\/(\d+)\/generate-days$/);
+    if (generate && request.method() === 'POST') {
+      if (options.generateStatus) return json(options.generateStatus, { error: { message: options.generateMessage || 'boom' } });
+      const { numberOfDays } = JSON.parse(request.postData());
+      return json(200, { requestId: 'r', result: Array.from({ length: numberOfDays }, (_, i) => ({ name: `AI day ${i + 1}`, description: `<p>Plan ${i + 1}</p>`, didYouKnow: null })) });
+    }
+    const batch = url.pathname.match(/^\/api\/trips\/(\d+)\/days\/batch$/);
+    if (batch && request.method() === 'POST' && details[batch[1]]) {
+      const detail = details[batch[1]];
+      const body = JSON.parse(request.postData());
+      const items = [...detail.days].sort((a, b) => a.order - b.order);
+      const created = body.days.map((d) => ({ id: ++nextId, tripId: 1, routeStopId: body.routeStopId, order: 0, title: d.title, description: d.description }));
+      items.splice(body.order, 0, ...created);
+      items.forEach((item, index) => { item.order = index; });
+      detail.days = items;
+      return json(201, { requestId: 'r', result: created });
+    }
     if (url.pathname.endsWith('/export/pdf')) {
       if (options.exportStatus) return json(options.exportStatus, { error: 'boom' });
       return route.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'access-control-allow-origin': '*' }, body: '%PDF-1.4 fake' });

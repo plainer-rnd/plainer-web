@@ -19,6 +19,17 @@ export function openDialog({ title, description, role = 'dialog', content = [] }
   return { dialog, close: () => dialog.close() };
 }
 
+// A small dialog with a spinner and a label for work that can't be cancelled. Esc doesn't close it;
+// the caller closes it when the work is done.
+export function progressDialog(label) {
+  const spinner = el('div', { class: 'spinner', 'aria-hidden': 'true' });
+  const { dialog, close } = openDialog({ title: label, role: 'alertdialog', content: [spinner] });
+  dialog.classList.add('progress-dialog');
+  dialog.setAttribute('aria-busy', 'true');
+  dialog.addEventListener('cancel', (event) => event.preventDefault());
+  return { close };
+}
+
 // Asks first; "run" does the work. If it throws, the dialog stays open with a message.
 export function confirmDialog({ title, text, okLabel, danger = true, run }) {
   const error = el('p', { class: 'error', role: 'alert', hidden: true });
