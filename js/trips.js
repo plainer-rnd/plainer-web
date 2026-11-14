@@ -8,7 +8,7 @@ import {
 } from './trips-model.js';
 import { el, svg } from './dom.js';
 import { confirmDialog, openDialog } from './dialogs.js';
-import { dateToApi, newTripBody, parseDateInput } from './trip-model.js';
+import { dateToApi, importErrorMessage, importFileProblem, importOutcome, newTripBody, parseDateInput, plural } from './trip-model.js';
 
 const VIEW_KEY = 'plainerTripsView';
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
@@ -205,6 +205,67 @@ function newTripDialog() {
   });
 }
 
+function importDialog() {
+  const input = el('input', { type: 'file', id: 'import-file', class: 'file-input', accept: 'application/pdf,.pdf' });
+  const error = el('p', { class: 'error', role: 'alert' });
+  const progress = el('p', { class: 'muted', role: 'status', 'aria-live': 'polite', hidden: true });
+  const cancel = el('button', { type: 'button', class: 'btn btn-outline', text: 'Cancel' });
+  const submit = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Import' });
+  const form = el('form', { method: 'dialog', novalidate: true }, [
+    el('label', { class: 'label', for: 'import-file', text: 'PDF file (up to 3 MB)' }), input,
+    error, progress,
+    el('div', { class: 'dialog-actions' }, [cancel, submit]),
+  ]);
+  const { dialog, close } = openDialog({
+    title: 'Import a trip from PDF',
+    description: 'Upload a PDF itinerary, such as one exported from Plainer or a booking plan. We’ll turn it into a new trip you can edit.',
+    content: [form],
+  });
+  cancel.addEventListener('click', close);
+
+  const showResult = (outcome) => {
+    const lines = [el('p', { text: `“${outcome.tripName}” was added with ${plural(outcome.stopCount, 'stop')} and ${plural(outcome.dayCount, 'day')}.` })];
+    if (outcome.unresolved.length) lines.push(el('p', { class: 'muted', text: `We couldn’t find a place for: ${outcome.unresolved.join(', ')}. You can fix these in the trip.` }));
+    if (outcome.partial.length) lines.push(el('p', { class: 'muted', text: `Some days are missing for: ${outcome.partial.join(', ')}.` }));
+    const open = el('a', { class: 'btn btn-primary', href: '/trip/?id=' + encodeURIComponent(outcome.tripId), text: 'Open trip' });
+    form.replaceChildren(...lines, el('div', { class: 'dialog-actions' }, [open]));
+    open.focus();
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const file = input.files[0];
+    const problem = importFileProblem(file);
+    if (problem) { error.textContent = problem; input.focus(); return; }
+    error.textContent = '';
+    submit.disabled = true;
+    input.disabled = true;
+    progress.hidden = false;
+    progress.textContent = 'Reading your PDF… this can take a minute.';
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const outcome = importOutcome(await api.postForm('trips/import', body));
+      if (!dialog.isConnected) { if (outcome.created) refresh(); return; }
+      if (!outcome.created) {
+        error.textContent = outcome.reason;
+      } else if (outcome.needsReview) {
+        showResult(outcome);
+        return;
+      } else {
+        location.assign('/trip/?id=' + encodeURIComponent(outcome.tripId));
+        return;
+      }
+    } catch (failure) {
+      if (!dialog.isConnected) return;
+      error.textContent = importErrorMessage(failure.status, failure.message);
+    }
+    progress.hidden = true;
+    submit.disabled = false;
+    input.disabled = false;
+  });
+}
+
 function tripCard(trip, user) {
   const owner = ownerLabel(trip, state.sharedWithCounts.get(trip.id) || 0);
   const card = el('a', { class: 'tcard cover-' + coverFor(trip.id), href: tripHref(trip) }, [
@@ -276,8 +337,10 @@ function emptyState(listIsEmpty) {
   }
   const create = el('button', { type: 'button', class: 'btn btn-primary', text: 'New trip' });
   create.addEventListener('click', newTripDialog);
+  const importPdf = el('button', { type: 'button', class: 'btn btn-outline', text: 'Import PDF' });
+  importPdf.addEventListener('click', importDialog);
   const getApp = el('a', { class: 'btn btn-outline', href: APP_STORE_URL, text: 'Get the iPhone app' });
-  return stateBlock('No trips yet', 'Start a trip here, or plan one in the Plainer iPhone app.', el('div', { class: 'dialog-actions' }, [create, getApp]));
+  return stateBlock('No trips yet', 'Start a trip here, import a PDF, or plan one in the Plainer iPhone app.', el('div', { class: 'dialog-actions' }, [create, importPdf, getApp]));
 }
 
 function showError(error) {
@@ -393,3 +456,4 @@ nodes.search.addEventListener('input', () => {
 start();
 
 document.getElementById('new-trip').addEventListener('click', newTripDialog);
+document.getElementById('import-pdf').addEventListener('click', importDialog);

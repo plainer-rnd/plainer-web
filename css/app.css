@@ -462,3 +462,9 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .draft-toggle[data-status="active"]{color:var(--mint-t)}
 .pl .draft-toggle[data-status="upcoming"]{color:var(--lav-t)}
 .pl .draft-toggle input{color:inherit;background:currentColor}
+
+/* Trips list: Import PDF */
+.pl .page-actions{display:flex;gap:10px;flex-wrap:wrap}
+.pl .file-input{display:block;width:100%;margin:6px 0 10px;font:inherit;font-size:14px;color:var(--t2)}
+.pl .file-input::file-selector-button{font:inherit;font-weight:600;margin-right:12px;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--t1);cursor:pointer}
+@media (max-width:640px){.pl .page-actions .btn{min-height:44px}}

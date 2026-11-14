@@ -57,17 +57,27 @@ async function mockApi(page, options = {}) {
   const details = options.details || JSON.parse(JSON.stringify(sampleDetails));
   let nextId = 900;
   const sharedBy = options.sharedBy || [{ tripId: 2, shares: [{ sharedWith: 'a@x.co', shareId: 1 }, { sharedWith: 'b@x.co', shareId: 2 }] }];
+  const parseBody = (request) => {
+    const data = request.postData();
+    if (!data) return null;
+    try { return JSON.parse(data); } catch (e) { return { multipart: true, hasPdf: /filename="[^"]+\.pdf"/.test(data) }; }
+  };
   const profile = options.profile || { email: 'olena@example.com', displayName: 'Olena From API' };
   await page.route('https://api.test/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    options.requests?.push({ method: request.method(), path: url.pathname, search: url.search, authorization: request.headers().authorization, body: request.postData() ? JSON.parse(request.postData()) : null });
+    options.requests?.push({ method: request.method(), path: url.pathname, search: url.search, authorization: request.headers().authorization, body: parseBody(request) });
     const json = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
     if (url.pathname === '/api/trips' && request.method() === 'GET') return options.tripsStatus && options.tripsStatus !== 200
       ? json(options.tripsStatus, { error: 'boom' })
       : json(200, { requestId: 'r', result: trips });
     if (url.pathname === '/api/trip-shares/by') return json(200, { requestId: 'r', result: sharedBy });
+    if (url.pathname === '/api/trips/import' && request.method() === 'POST') {
+      if (options.importStatus) return json(options.importStatus, { error: { message: options.importMessage || 'boom' } });
+      const created = { rejectionReason: null, tripId: 88, tripName: 'Imported Rome', routeStopCount: 2, dayCount: 4, routeStops: [{ routeStopId: 1, name: 'Rome', dayIds: [1], daysMissing: false }], unresolvedStopNames: [] };
+      return json(created.rejectionReason || options.importResult?.tripId === null ? 200 : 201, { requestId: 'r', result: { ...created, ...(options.importResult || {}) } });
+    }
     if (url.pathname.endsWith('/export/pdf')) {
       if (options.exportStatus) return json(options.exportStatus, { error: 'boom' });
       return route.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'access-control-allow-origin': '*' }, body: '%PDF-1.4 fake' });
