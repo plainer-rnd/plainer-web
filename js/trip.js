@@ -220,8 +220,20 @@ function iconButton(text, label, handler) {
   return button;
 }
 
-function actionButton(text, label, handler, { disabled = false, danger = false } = {}) {
-  const button = el('button', { type: 'button', class: `action-btn${danger ? ' danger' : ''}`, 'aria-label': label, text });
+const ICONS = {
+  up: '<path d="M12 19V5M5 12l7-7 7 7"></path>',
+  down: '<path d="M12 5v14M5 12l7 7 7-7"></path>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>',
+  place: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+};
+
+// Icon-only round button; the label is the tooltip and the accessible name.
+function actionButton(icon, label, handler, { disabled = false, danger = false } = {}) {
+  const image = svg(ICONS[icon]);
+  [['viewBox', '0 0 24 24'], ['width', '18'], ['height', '18'], ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', '2'], ['stroke-linecap', 'round'], ['stroke-linejoin', 'round'], ['aria-hidden', 'true']]
+    .forEach(([name, value]) => image.setAttribute(name, value));
+  const button = el('button', { type: 'button', class: `action-btn${danger ? ' danger' : ''}`, 'aria-label': label, title: label }, image);
   button.disabled = disabled;
   button.addEventListener('click', handler);
   return button;
@@ -229,10 +241,10 @@ function actionButton(text, label, handler, { disabled = false, danger = false }
 
 function dayActions(day) {
   return el('div', { class: 'day-actions', role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
-    actionButton('↑ Move up', `Move day ${day.number} up`, () => moveDay(day, -1), { disabled: dayMoveIndex(state.groups, day, -1) === null }),
-    actionButton('↓ Move down', `Move day ${day.number} down`, () => moveDay(day, 1), { disabled: dayMoveIndex(state.groups, day, 1) === null }),
-    actionButton('Duplicate', `Duplicate day ${day.number}`, () => duplicateDay(day)),
-    actionButton('Delete', `Delete day ${day.number}`, () => deleteDay(day), { danger: true }),
+    actionButton('up', `Move day ${day.number} up`, () => moveDay(day, -1), { disabled: dayMoveIndex(state.groups, day, -1) === null }),
+    actionButton('down', `Move day ${day.number} down`, () => moveDay(day, 1), { disabled: dayMoveIndex(state.groups, day, 1) === null }),
+    actionButton('copy', `Duplicate day ${day.number}`, () => duplicateDay(day)),
+    actionButton('trash', `Delete day ${day.number}`, () => deleteDay(day), { danger: true }),
   ]);
 }
 
@@ -309,16 +321,16 @@ function stopRow(group, index) {
       el('div', { class: 'stop-edit-body' }, [
         el('div', { class: 'stop-edit-name' }, [
           el('span', { class: 'day-title', text: stop.name }),
-          actionButton('Change place', `Change place for ${stop.name}`, () => changePlace(stop)),
+          actionButton('place', `Change place for ${stop.name}`, () => changePlace(stop)),
         ]),
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
         ]),
         el('div', { class: 'stop-edit-actions', role: 'group', 'aria-label': `Actions for ${stop.name}` }, [
-          actionButton('↑ Move up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
-          actionButton('↓ Move down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
-          actionButton('Remove', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
+          actionButton('up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
+          actionButton('down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
+          actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
         ]),
       ]),
     ]);

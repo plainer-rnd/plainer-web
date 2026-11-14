@@ -401,7 +401,7 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .col-head .muted{flex:1}
 .pl .ghead b{flex:1}
 .pl .add{font:inherit;font-size:20px;font-weight:700;line-height:1}
-.pl .action-btn{min-height:36px;padding:0 12px;border:1px solid var(--line2);border-radius:999px;background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pl .action-btn{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line2);border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
 .pl .action-btn:hover:not(:disabled){background:var(--field)}
 .pl .action-btn:disabled{opacity:.4;cursor:not-allowed}
 .pl .action-btn.danger{color:var(--danger);border-color:var(--danger)}
@@ -412,7 +412,7 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .picker-list{list-style:none;margin:0;padding:0;max-height:280px;overflow:auto}
 .pl .picker-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:48px;padding:8px 10px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .pl .picker-item:hover,.pl .picker-item:focus-visible{background:var(--mint2)}
-@media (max-width:720px){.pl .action-btn{min-height:44px}.pl .add{width:44px;height:44px}}
+@media (max-width:720px){.pl .action-btn{width:44px;height:44px}.pl .add{width:44px;height:44px}}
 
 /* Trips list actions */
 .pl .tcard-wrap{position:relative;display:flex;min-width:0}
