@@ -36,6 +36,12 @@ test('the login link returns to the trip after logging in or signing up', () => 
   assert.equal(url.searchParams.get('next'), `/join-shared-trip?code=${CODE}`);
 });
 
+test('the login link returns to the same page, also for the Dev app’s link path', () => {
+  assert.equal(new URL(loginUrl(CODE, '/join-shared-trip-dev'), 'https://x').searchParams.get('next'), `/join-shared-trip-dev?code=${CODE}`);
+  assert.equal(new URL(loginUrl(CODE, '/join-shared-trip/'), 'https://x').searchParams.get('next'), `/join-shared-trip?code=${CODE}`);
+  assert.equal(new URL(loginUrl(CODE, '//evil.example'), 'https://x').searchParams.get('next'), `/join-shared-trip?code=${CODE}`);
+});
+
 test('error texts are plain and never leak details', () => {
   assert.equal(previewErrorKind(404), 'expired');
   assert.equal(previewErrorKind(0), 'network');

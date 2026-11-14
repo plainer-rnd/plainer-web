@@ -3,6 +3,8 @@
 // iOS opens it in the Plainer app when that is installed (universal link); everywhere else this website shows the trip.
 
 export const JOIN_PATH = '/join-shared-trip';
+// The Dev app uses its own path so it and the Prod app can both be installed; the page is the same.
+export const JOIN_PATH_DEV = '/join-shared-trip-dev';
 export const APP_STORE_URL = 'https://apps.apple.com/app/id6740170760';
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,7 +27,10 @@ export function isIosDevice({ userAgent = '', platform = '', maxTouchPoints = 0 
 }
 
 // Where the "log in" button goes: back to this very page afterwards, whether they log in or sign up.
-export const loginUrl = (code) => `/login/?next=${encodeURIComponent(`${JOIN_PATH}?code=${code}`)}`;
+export function loginUrl(code, path = JOIN_PATH) {
+  const page = path === JOIN_PATH_DEV ? JOIN_PATH_DEV : JOIN_PATH;
+  return `/login/?next=${encodeURIComponent(`${page}?code=${code}`)}`;
+}
 
 export function previewErrorKind(status) {
   if (status === 0) return 'network';

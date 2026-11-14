@@ -3,6 +3,8 @@
 /wtm                  /wtm/      301
 # Share-by-link URLs are opened by the iPhone app as universal links, so the exact path (no trailing slash) must keep working here
 /join-shared-trip     /join-shared-trip/  200
+# The Dev app builds its links with this path (so it and the Prod app can both be installed); same page
+/join-shared-trip-dev /join-shared-trip/  200
 /demo                  /          302
 /demo/                 /          302
 

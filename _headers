@@ -22,3 +22,6 @@
 /join-shared-trip/
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+/join-shared-trip-dev
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store

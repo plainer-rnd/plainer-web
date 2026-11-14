@@ -39,6 +39,14 @@ test.describe('opened on a computer without logging in', () => {
     expect(calls[0].authorization).toBeUndefined();
   });
 
+  test('a link from the Dev app (/join-shared-trip-dev) opens the same page and returns to it after login', async ({ page }) => {
+    await mockApi(page);
+    await page.goto(`/join-shared-trip-dev?code=${KNOWN_LINK}`);
+    await expect(page.locator('#join-name')).toHaveText('2 weeks in Norway');
+    const href = await page.getByRole('link', { name: 'Log in to add this trip to your list' }).getAttribute('href');
+    expect(new URL(href, 'http://x').searchParams.get('next')).toBe(`/join-shared-trip-dev?code=${KNOWN_LINK}`);
+  });
+
   test('the page keeps the link code out of Referer and out of caches', async ({ page }) => {
     await mockApi(page);
     await page.goto(PAGE);

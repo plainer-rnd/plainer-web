@@ -78,7 +78,7 @@ function renderCta() {
     nodes.cta.replaceChildren(add);
   } else {
     nodes.barSub.textContent = 'It’s read-only. Log in, or create an account, to add it to your list.';
-    nodes.cta.replaceChildren(el('a', { class: 'btn btn-primary', href: loginUrl(state.code), text: 'Log in to add this trip to your list' }));
+    nodes.cta.replaceChildren(el('a', { class: 'btn btn-primary', href: loginUrl(state.code, location.pathname), text: 'Log in to add this trip to your list' }));
   }
 }
 
