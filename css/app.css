@@ -346,3 +346,33 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
   .pl .trip-cols{display:block}
   .pl .day-plan{margin-left:16px}
 }
+
+/* Trip editing */
+.pl .trip-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.pl .trip-actions{display:flex;align-items:center;gap:12px;flex:0 0 auto;position:relative}
+.pl .save-status{font-size:14px;font-weight:600;color:var(--t3);display:inline-flex;gap:8px;align-items:center}
+.pl .save-status[data-status="saved"]{color:var(--mint-t)}
+.pl .save-status[data-status="error"]{color:var(--danger)}
+.pl .link-btn{background:none;border:0;padding:4px 6px;min-height:32px;font:inherit;font-weight:700;color:var(--green);text-decoration:underline;cursor:pointer}
+.pl .menu button.danger{color:var(--danger)}
+.pl .readonly-note{margin:0}
+.pl .trip-title .editable{display:block;max-width:100%;font-weight:800}
+.pl .editable.is-empty{color:var(--t3);font-style:italic}
+.pl .day-text .editable.day-title{font-weight:600;font-size:16px;align-self:flex-start}
+.pl .plan-edit{display:block;width:100%;white-space:pre-wrap;font-size:15px;line-height:1.55;overflow-wrap:anywhere;margin:0 0 0 -6px;padding:2px 6px;width:calc(100% + 6px)}
+.pl .stop-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
+.pl .stop-controls .stepper button{width:36px;height:36px}
+.pl .stop-controls .stepper button:disabled{opacity:.4;cursor:not-allowed}
+.pl .transport-select{min-height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;padding:0 10px}
+.pl .dialog{border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--ink);padding:24px;max-width:440px;width:calc(100% - 32px);box-shadow:var(--shadow)}
+.pl .dialog::backdrop{background:rgba(0,0,0,.5)}
+.pl .dialog h2{margin:0 0 8px;font-size:22px}
+.pl .dialog p{margin:0 0 12px}
+.pl .dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+@media (max-width:720px){
+  .pl .trip-head{min-width:0;flex:1}
+  .pl .trip-actions{flex-direction:column-reverse;align-items:flex-end;gap:6px}
+  .pl .save-status{font-size:12px;max-width:96px;text-align:right;flex-wrap:wrap;justify-content:flex-end}
+  .pl .stop-controls .stepper button{height:44px;width:44px}
+  .pl .transport-select{min-height:44px}
+}

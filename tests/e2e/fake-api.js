@@ -59,13 +59,18 @@ async function mockApi(page, options = {}) {
   await page.route('https://api.test/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    options.requests?.push({ path: url.pathname, search: url.search, authorization: request.headers().authorization });
+    options.requests?.push({ method: request.method(), path: url.pathname, search: url.search, authorization: request.headers().authorization, body: request.postData() ? JSON.parse(request.postData()) : null });
     const json = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
     if (url.pathname === '/api/trips') return options.tripsStatus && options.tripsStatus !== 200
       ? json(options.tripsStatus, { error: 'boom' })
       : json(200, { requestId: 'r', result: trips });
     if (url.pathname === '/api/trip-shares/by') return json(200, { requestId: 'r', result: sharedBy });
+    if (request.method() !== 'GET') {
+      if (options.writeStatus) return json(options.writeStatus, { error: 'boom' });
+      if (/\/clone$/.test(url.pathname)) return json(201, { requestId: 'r', result: { id: 77, name: 'Copy' } });
+      return json(200, { requestId: 'r', result: {} });
+    }
     const tripPath = url.pathname.match(/^\/api\/trips\/(\d+)(\/[a-z-]+)?$/);
     if (tripPath) {
       const detail = (options.details || sampleDetails)[tripPath[1]];

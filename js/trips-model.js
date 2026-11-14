@@ -19,6 +19,7 @@ export function tripFromDto(dto) {
     name: dto.name || 'Untitled trip',
     isDraft: dto.isDraft ?? true,
     startDate: parseStartDate(dto.startDate),
+    description: dto.description ?? null,
     shareId: dto.shareId ?? null,
     sharedBy: dto.sharedBy ?? null,
   };

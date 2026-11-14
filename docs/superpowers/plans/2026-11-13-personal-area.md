@@ -90,6 +90,8 @@ Four stages, each ends in one PR, branched from `main` after the previous PR mer
 
 **Branch:** `feature/personal-area-trip-edit` (if it grows too large, split into 4a "text, types, trip actions" and 4b "structure and drag-and-drop"; recommend deciding after the stage 3 merge).
 
+**Split decided:** 4a (this PR) = autosave, trip name / start date / day title / day plan / stop nights / transport, Duplicate / Delete / Leave on the trip page. 4b = add / remove / duplicate / reorder stops and days, stop rename (location picker), trips-page ⋯ menu and New trip modal. Day plans are edited as plain text (one paragraph per line) and saved as `<p>` paragraphs, which flattens any formatting the app wrote.
+
 ### Autosave model (replaces Save/Discard)
 
 - Edit in place per the design: click `.editable` → `.inline-input`; **Enter or blur commits, Esc cancels that field**. An unchanged value sends nothing.

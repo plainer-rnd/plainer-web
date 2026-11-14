@@ -73,7 +73,7 @@ test.describe('trip details', () => {
     await page.goto('/trip/?id=1');
     await page.getByRole('button', { name: 'Expand day 3' }).click();
     await expect(page.locator('#days-list')).toContainText('Day 3');
-    await expect(page.locator('#day-103-plan')).toContainText('Nothing planned for this day yet.');
+    await expect(page.locator('#day-103-plan')).toContainText('Add a plan for this day');
   });
 
   test('a trip without stops explains how to add them', async ({ page }) => {
@@ -139,14 +139,36 @@ test.describe('trip details', () => {
     expect(await page.evaluate(() => window.pwned)).toBeUndefined();
   });
 
-  test('desktop shows no editing or deferred actions', async ({ page }) => {
+  test('deferred actions are not rendered, and there is no Save button', async ({ page }) => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
-    for (const name of ['Share', 'Export PDF', 'Save changes', 'Review']) {
-      await expect(page.getByRole('button', { name })).toHaveCount(0);
+    for (const name of ['Share', 'Export PDF', 'Save changes', 'Save', 'Review']) {
+      await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
-    await expect(page.locator('.editable')).toHaveCount(0);
     await expect(page.locator('.pane-tabs')).toBeHidden();
+  });
+
+  test('a trip shared with me is view only and offers Leave', async ({ page }) => {
+    const requests = [];
+    await mockApi(page, { requests, sharedWithMe: [{ id: 5, name: 'Lisbon with Olena', shareId: 50, sharedBy: 'Olena' }] });
+    await page.goto('/trip/?id=5');
+    await expect(page.locator('#readonly-note')).toHaveText('Shared by Olena · view only');
+    await expect(page.locator('.editable')).toHaveCount(0);
+    await expect(page.locator('.stepper')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'More trip actions' }).click();
+    await expect(page.getByRole('menuitem')).toHaveText(['Leave trip…']);
+    await page.getByRole('menuitem', { name: 'Leave trip…' }).click();
+    await expect(page.getByRole('alertdialog')).toContainText('Leave this trip?');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    expect(requests.some((r) => r.method === 'DELETE')).toBe(false);
+
+    await page.getByRole('button', { name: 'More trip actions' }).click();
+    await page.getByRole('menuitem', { name: 'Leave trip…' }).click();
+    await page.route('**/trips/', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Trips</title>' }));
+    await page.getByRole('button', { name: 'Leave trip' }).click();
+    await expect(page).toHaveURL(/\/trips\/$/);
+    expect(requests.find((r) => r.method === 'DELETE').path).toBe('/api/trip-shares/unsubscribe/5');
   });
 
   test.describe('phone', () => {

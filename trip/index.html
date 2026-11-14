@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=4">
+<link rel="stylesheet" href="/css/app.css?v=6">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/trip.js?v=1"></script>
+<script type="module" src="/js/trip.js?v=2"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -49,6 +49,7 @@
   </div>
   <div id="message" hidden></div>
   <div id="trip-app" hidden>
+    <div class="trip-top">
     <div class="trip-head">
       <h1 class="display trip-title" id="trip-name"></h1>
       <div class="trip-meta t2">
@@ -58,6 +59,18 @@
         <span id="trip-owner"></span>
         <span id="trip-people" class="people"></span>
       </div>
+      <p class="muted small readonly-note" id="readonly-note" hidden></p>
+    </div>
+    <div class="trip-actions">
+      <div class="save-status" id="save-status" hidden>
+        <span id="save-text"></span>
+        <button type="button" class="link-btn" id="save-retry" hidden>Retry</button>
+      </div>
+      <div class="account" id="trip-menu-wrap">
+        <button type="button" class="icon-btn" id="trip-menu-button" aria-label="More trip actions" aria-haspopup="true" aria-expanded="false" aria-controls="trip-menu"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+        <div class="menu account-menu" id="trip-menu" hidden></div>
+      </div>
+    </div>
     </div>
 
     <div class="seg pane-tabs" role="tablist" aria-label="Trip sections">
@@ -81,6 +94,15 @@
     <p class="visually-hidden" id="trip-status-live" role="status" aria-live="polite"></p>
   </div>
   <noscript><p class="notice">Your trip needs JavaScript. Please turn it on and reload.</p></noscript>
+  <dialog class="dialog" id="confirm" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+    <h2 id="confirm-title"></h2>
+    <p class="muted" id="confirm-text"></p>
+    <p class="error" id="confirm-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-outline" id="confirm-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-ok"></button>
+    </div>
+  </dialog>
 </main>
 </body>
 </html>
