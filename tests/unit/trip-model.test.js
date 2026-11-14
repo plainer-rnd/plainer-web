@@ -164,3 +164,20 @@ test('importErrorMessage', async () => {
   assert.equal(importErrorMessage(400, 'Request failed with status 400'), 'That file can’t be imported.');
   assert.match(importErrorMessage(500, 'x'), /Couldn’t import/);
 });
+
+test('AI helpers', async () => {
+  const m = await import('../../js/trip-model.js');
+  assert.equal(m.expressProblem('  '), 'Describe your trip first.');
+  assert.equal(m.expressProblem('x'.repeat(501)), 'Please keep it under 500 characters.');
+  assert.equal(m.expressProblem('Rome'), null);
+  assert.match(m.aiErrorMessage(0), /internet/);
+  assert.match(m.aiErrorMessage(429), /Too many/);
+  assert.equal(m.aiErrorMessage(400, 'Instructions are required.'), 'Instructions are required.');
+  const groups = [{ stop: { id: 1 }, days: [{}, {}] }, { stop: { id: 2 }, days: [{}] }, { stop: { id: 3 }, days: [] }];
+  assert.equal(m.daysBeforeStop(groups, 1), 0);
+  assert.equal(m.daysBeforeStop(groups, 2), 2);
+  assert.equal(m.daysBeforeStop(groups, 3), 3);
+  assert.deepEqual(m.generatedDaysBody(2, 2, [{ name: 'A', description: '<p>x</p>' }, { name: '', description: null }]),
+    { routeStopId: 2, order: 2, days: [{ title: 'A', description: '<p>x</p>' }, { title: null, description: '' }] });
+  assert.equal(m.importOutcome({ tripId: null }, 'custom').reason, 'custom');
+});

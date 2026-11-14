@@ -269,9 +269,9 @@ export function importFileProblem(file) {
 }
 
 // What the import produced. `created` is false when the server declined the file (nothing was added).
-export function importOutcome(result) {
+export function importOutcome(result, fallbackReason = 'That PDF doesn’t look like a trip plan.') {
   if (!result || !result.tripId) {
-    return { created: false, reason: (result && result.rejectionReason) || 'That PDF doesn’t look like a trip plan.' };
+    return { created: false, reason: (result && result.rejectionReason) || fallbackReason };
   }
   const stops = result.routeStops || [];
   const unresolved = result.unresolvedStopNames || [];
@@ -292,4 +292,39 @@ export function importErrorMessage(status, serverMessage) {
   if (status === 0) return 'Check your internet connection and try again.';
   if (status === 400 || status === 413) return serverMessage && !/^Request failed/.test(serverMessage) ? serverMessage : 'That file can’t be imported.';
   return 'Couldn’t import the PDF. Please try again.';
+}
+
+// ---- AI planning ----
+
+export const EXPRESS_MAX_CHARS = 500;
+export const MAX_AI_DAYS = 7; // the most days the server will write for one stop in a single request
+export const EXPRESS_EXAMPLES = ['7 days in Portugal, foodie', 'Long weekend in Rome with kids', '10 days road trip in Scotland'];
+
+export function expressProblem(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return 'Describe your trip first.';
+  if (trimmed.length > EXPRESS_MAX_CHARS) return `Please keep it under ${EXPRESS_MAX_CHARS} characters.`;
+  return null;
+}
+
+export function aiErrorMessage(status, serverMessage) {
+  if (status === 0) return 'Check your internet connection and try again.';
+  if (status === 400) return serverMessage && !/^Request failed/.test(serverMessage) ? serverMessage : 'That request can’t be planned.';
+  if (status === 429) return 'Too many requests right now. Wait a moment and try again.';
+  return 'Couldn’t plan that right now. Please try again.';
+}
+
+// Number of days that sit before this stop's days in the whole trip (the index where its first day goes).
+export function daysBeforeStop(groups, stopId) {
+  let count = 0;
+  for (const group of groups) {
+    if (group.stop.id === stopId) return count;
+    count += group.days.length;
+  }
+  return count;
+}
+
+// Body for POST days/batch from the server's generated days ({name, description}).
+export function generatedDaysBody(stopId, order, generated) {
+  return { routeStopId: stopId, order, days: generated.map((day) => ({ title: day.name || null, description: day.description || '' })) };
 }

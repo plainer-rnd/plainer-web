@@ -468,3 +468,12 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .file-input{display:block;width:100%;margin:6px 0 10px;font:inherit;font-size:14px;color:var(--t2)}
 .pl .file-input::file-selector-button{font:inherit;font-weight:600;margin-right:12px;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--t1);cursor:pointer}
 @media (max-width:640px){.pl .page-actions .btn{min-height:44px}}
+
+/* AI planning */
+.pl .plan-text{width:100%;resize:vertical;min-height:96px;font:inherit}
+.pl .plan-count{text-align:right;margin:4px 0 8px}
+.pl .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.pl .chip:disabled{opacity:.5;cursor:default}
+.pl .radio-group{border:0;padding:0;margin:14px 0 4px}
+.pl .radio-row{display:flex;align-items:center;gap:10px;min-height:36px;font-size:14px;cursor:pointer}
+@media (max-width:640px){.pl .radio-row{min-height:44px}.pl .page-actions{width:100%}}

@@ -7,12 +7,14 @@ import {
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
   pdfFileName, insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
+  daysBeforeStop, generatedDaysBody,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
 import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
+import { openGenerateDaysDialog } from './ai-days-dialog.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -231,6 +233,7 @@ const ICONS = {
   up: '<path d="M12 19V5M5 12l7-7 7 7"></path>',
   down: '<path d="M12 5v14M5 12l7 7 7-7"></path>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"></path><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"></path>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>',
 };
 
@@ -387,6 +390,7 @@ function stopRow(group, index) {
         el('div', { class: 'stop-edit-actions', role: 'group', 'aria-label': `Actions for ${stop.name}` }, [
           actionButton('up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
           actionButton('down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
+          actionButton('sparkle', `Generate days with AI for ${stop.name}`, () => generateDays(stop, group)),
           actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
         ]),
       ]),
@@ -668,6 +672,28 @@ function pickPlace(title) {
     }
     input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
     input.focus();
+  });
+}
+
+function generateDays(stop, group) {
+  openGenerateDaysDialog({
+    api: state.api,
+    tripId: state.id,
+    stop,
+    existingCount: group.days.length,
+    onGenerated: (generated, mode) => structure({
+      send: async () => {
+        const current = state.groups.find((g) => g.stop.id === stop.id);
+        let order = insertIndexForStop(state.groups, stop.id);
+        if (mode === 'replace' && current) {
+          order = daysBeforeStop(state.groups, stop.id);
+          for (const day of current.days) await state.api.delete(`trips/${state.id}/days/${day.id}`);
+        }
+        const created = await state.api.post(`trips/${state.id}/days/batch`, generatedDaysBody(stop.id, order, generated));
+        (created || []).forEach((day) => state.expanded.add(day.id));
+        state.editingStop = null;
+      },
+    }),
   });
 }
 
