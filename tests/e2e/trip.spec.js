@@ -40,7 +40,7 @@ test.describe('trip details', () => {
     await expect(page.locator('#pane-overview')).toContainText('Fix 3 validation issues');
 
     // Stops are in route order, with their days grouped underneath.
-    const headings = page.locator('#days-list .ghead');
+    const headings = page.locator('#days-list .ghead b');
     await expect(headings).toHaveText(['Oslo · 2 days', 'Bergen · 1 day', 'Flåm · 0 days']);
     await expect(page.locator('#route-list .stop-row')).toHaveCount(3);
     await expect(page.locator('#route-list .stop-row').nth(0)).toContainText('Planned: 2 · Actual: 2 · Flight');
@@ -52,7 +52,7 @@ test.describe('trip details', () => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
 
-    const first = page.getByRole('button', { name: /day 1$/ });
+    const first = page.getByRole('button', { name: 'Collapse day 1' });
     await expect(first).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('#day-101-plan')).toContainText('Akershus Fortress.');
 

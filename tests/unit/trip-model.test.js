@@ -68,3 +68,59 @@ test('sharedPeople, parseTripId and plural', () => {
   assert.equal(plural(1, 'day'), '1 day');
   assert.equal(plural(2, 'validation issue'), '2 validation issues');
 });
+
+import { insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, newTripBody } from '../../js/trip-model.js';
+
+test('structure helpers: insertion index, day moves, stop moves', () => {
+  const stops = [{ id: 1, order: 0, name: 'A' }, { id: 2, order: 1, name: 'B' }, { id: 3, order: 2, name: 'C' }];
+  const days = [
+    { id: 10, stopId: 1, order: 0, plan: [] }, { id: 11, stopId: 1, order: 1, plan: [] },
+    { id: 20, stopId: 2, order: 2, plan: [] },
+  ];
+  const groups = buildItinerary(stops, days);
+  assert.equal(insertIndexForStop(groups, 1), 2);
+  assert.equal(insertIndexForStop(groups, 2), 3);
+  assert.equal(insertIndexForStop(groups, 3), 3); // a stop with no days: after everything before it
+
+  assert.equal(dayMoveIndex(groups, groups[0].days[0], 1), 1);
+  assert.equal(dayMoveIndex(groups, groups[0].days[1], -1), 0);
+  assert.equal(dayMoveIndex(groups, groups[0].days[0], -1), null);
+  assert.equal(dayMoveIndex(groups, groups[0].days[1], 1), null); // does not cross into the next stop
+
+  assert.deepEqual(stopMoveIds(stops, 2, -1), [2, 1, 3]);
+  assert.deepEqual(stopMoveIds(stops, 2, 1), [1, 3, 2]);
+  assert.equal(stopMoveIds(stops, 1, -1), null);
+  assert.equal(stopMoveIds(stops, 3, 1), null);
+});
+
+test('duplicateDayBody and newTripBody', () => {
+  assert.deepEqual(duplicateDayBody({ stopId: 4, title: 'T', plan: ['a & b'] }, 7), { routeStopId: 4, order: 7, title: 'T', description: '<p>a &amp; b</p>' });
+  assert.equal(duplicateDayBody({ stopId: 4, title: '', plan: [] }, 0).title, null);
+  assert.deepEqual(newTripBody('Rome', new Date(2026, 4, 1)), { name: 'Rome', startDate: '2026-05-01T00:00:00Z', description: null, isDraft: true });
+});
+
+import { moveItem, stopDropIds, dayDropOrder } from '../../js/trip-model.js';
+
+test('drag and drop helpers', () => {
+  const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  assert.deepEqual(moveItem(items, 1, 3, true).map((i) => i.id), [2, 3, 1]);
+  assert.deepEqual(moveItem(items, 3, 1, false).map((i) => i.id), [3, 1, 2]);
+  assert.equal(moveItem(items, 9, 1, false), items);
+
+  const stops = [{ id: 1, order: 0 }, { id: 2, order: 1 }, { id: 3, order: 2 }];
+  assert.deepEqual(stopDropIds(stops, 1, 3, true), [2, 3, 1]);
+  assert.equal(stopDropIds(stops, 2, 1, true), null); // dropped where it already is
+  assert.equal(stopDropIds(stops, 2, 3, false), null);
+
+  const groups = buildItinerary(
+    [{ id: 1, order: 0, name: 'A' }, { id: 2, order: 1, name: 'B' }],
+    [{ id: 10, stopId: 1, order: 0, plan: [] }, { id: 11, stopId: 1, order: 1, plan: [] }, { id: 12, stopId: 1, order: 2, plan: [] }, { id: 20, stopId: 2, order: 3, plan: [] }],
+  );
+  const [a, b, c] = groups[0].days;
+  assert.equal(dayDropOrder(groups, a, c, true), 2);
+  assert.equal(dayDropOrder(groups, c, a, false), 0);
+  assert.equal(dayDropOrder(groups, a, b, false), null);
+  assert.equal(dayDropOrder(groups, a, groups[1].days[0], false), null); // other stop
+  const second = groups[1].days[0];
+  assert.equal(dayDropOrder(groups, second, second, true), null);
+});

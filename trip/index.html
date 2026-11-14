@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=15">
+<link rel="stylesheet" href="/css/app.css?v=21">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/trip.js?v=2"></script>
+<script type="module" src="/js/trip.js?v=5"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -87,22 +87,13 @@
         <div class="panel itinerary" id="days-list"></div>
       </section>
       <aside class="pane route-col" id="pane-stops" data-pane="stops" aria-labelledby="route-h" role="tabpanel">
-        <div class="col-head"><h2 id="route-h" class="display">Route</h2><span class="muted" id="route-sub"></span></div>
+        <div class="col-head"><h2 id="route-h" class="display">Route</h2><span class="muted" id="route-sub"></span><button type="button" class="add" id="add-stop" aria-label="Add stop" hidden>+</button></div>
         <div class="panel itinerary" id="route-list"></div>
       </aside>
     </div>
     <p class="visually-hidden" id="trip-status-live" role="status" aria-live="polite"></p>
   </div>
   <noscript><p class="notice">Your trip needs JavaScript. Please turn it on and reload.</p></noscript>
-  <dialog class="dialog" id="confirm" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-text">
-    <h2 id="confirm-title"></h2>
-    <p class="muted" id="confirm-text"></p>
-    <p class="error" id="confirm-error" role="alert" hidden></p>
-    <div class="dialog-actions">
-      <button type="button" class="btn btn-outline" id="confirm-cancel">Cancel</button>
-      <button type="button" class="btn btn-danger" id="confirm-ok"></button>
-    </div>
-  </dialog>
 </main>
 </body>
 </html>
