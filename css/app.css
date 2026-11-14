@@ -587,3 +587,9 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .link-row .picker-input{flex:1;min-width:0}
 .pl .link-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:640px){.pl .link-row{flex-direction:column}.pl .link-row .btn,.pl .link-actions .btn{min-height:44px}}
+
+/* Delete account */
+.pl .danger-zone{margin-top:20px}
+.pl .danger-zone .card-title{margin:0}
+.pl .danger-zone p{margin:0}
+@media (max-width:640px){.pl .danger-zone .btn{min-height:44px;width:100%;justify-content:center}}

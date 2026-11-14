@@ -18,6 +18,8 @@ const signupLink = document.querySelector('a[href="/signup/"]');
 const next = new URLSearchParams(location.search).get('next');
 if (signupLink && next) signupLink.href = '/signup/?next=' + encodeURIComponent(nextUrl());
 
+if (new URLSearchParams(location.search).get('deleted') === '1') notice.textContent = 'Your account has been deleted.';
+
 getUser().then((user) => {
   if (user) location.replace(nextUrl());
 });

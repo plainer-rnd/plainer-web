@@ -9,10 +9,14 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   reload,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signOut as firebaseSignOut,
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { config } from './config.js';
 import { safeNext } from './auth-utils.js';
+import { clearLocalAccountData } from './account-model.js';
 
 if (config.firebase.apiKey.startsWith('REPLACE_')) {
   throw new Error('js/config.js still has placeholder Firebase values for the ' + config.name + ' environment.');
@@ -82,6 +86,14 @@ export function resendVerification(user) {
 // Re-reads the account from Firebase (e.g. after the user confirmed their email in another tab).
 export function refreshUser(user) {
   return reload(user);
+}
+
+// Deletes the Firebase account for good. Firebase wants a recent login for this, so the password is checked first.
+// Afterwards nothing personal is left in this browser.
+export async function deleteAccount(user, password) {
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+  await deleteUser(user);
+  clearLocalAccountData(window.localStorage, window.sessionStorage);
 }
 
 export async function signOut() {

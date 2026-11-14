@@ -30,6 +30,20 @@ export const sendEmailVerification = async () => { log('sendEmailVerification');
 export const sendPasswordResetEmail = async (auth, email) => { log('sendPasswordResetEmail', email); };
 export const reload = async () => {};
 export const signOut = async () => write(null);
+export const EmailAuthProvider = { credential: (email, pw) => ({ email, pw }) };
+export const reauthenticateWithCredential = async (user, credential) => {
+  log('reauthenticate', credential.email);
+  if (sessionStorage.getItem('fakeSlow')) await new Promise((r) => setTimeout(r, 500));
+  const code = sessionStorage.getItem('fakeReauthError');
+  if (code) return fail(code);
+  return credential.pw === 'password123' ? {} : fail('auth/invalid-credential');
+};
+export const deleteUser = async (user) => {
+  log('deleteUser', user.email);
+  const code = sessionStorage.getItem('fakeDeleteError');
+  if (code) return fail(code);
+  write(null);
+};
 `;
 
 async function installFakeFirebase(page) {
