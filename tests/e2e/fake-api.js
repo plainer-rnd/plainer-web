@@ -11,7 +11,8 @@ const sampleTrips = [
   { id: 6, name: 'Max’s Alps', startDate: farPast, isDraft: false, shareId: 60, sharedBy: 'Max' },
 ];
 
-const place = (name) => ({ id: 'g-' + name, name, type: 'locality', address: name, latitude: 0, longitude: 0 });
+const COORDS = { Oslo: [59.9139, 10.7522], Bergen: [60.3913, 5.3221], 'Flåm': [60.8629, 7.1141], Stavanger: [58.97, 5.7331], Lisbon: [38.7223, -9.1393] };
+const place = (name) => ({ id: 'g-' + name, name, type: 'locality', address: name, latitude: (COORDS[name] || [0, 0])[0], longitude: (COORDS[name] || [0, 0])[1] });
 
 const sampleDetails = {
   1: {
@@ -68,6 +69,17 @@ async function mockApi(page, options = {}) {
     try { return JSON.parse(data); } catch (e) { return { multipart: true, hasPdf: /filename="[^"]+\.pdf"/.test(data) }; }
   };
   const profile = options.profile || { email: 'olena@example.com', displayName: 'Olena From API' };
+  // The map library comes from a CDN: serve the identical npm copy (the page checks its integrity hash) and blank tiles.
+  const path = require('path');
+  const dist = path.join(__dirname, '..', '..', 'node_modules', 'leaflet', 'dist');
+  await page.route('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/*', (route) => {
+    const file = new URL(route.request().url()).pathname.split('/').pop();
+    return route.fulfill({ path: path.join(dist, file), headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.route('https://tile.openstreetmap.org/**', (route) => route.fulfill({
+    contentType: 'image/png',
+    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+  }));
   await page.route('https://api.test/api/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());

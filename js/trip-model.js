@@ -9,6 +9,8 @@ export function stopFromDto(dto) {
     name: (dto.location && dto.location.name) || 'Unnamed stop',
     plannedDays: dto.plannedDays ?? 1,
     transport: dto.transport || null,
+    latitude: Number(dto.location && dto.location.latitude) || 0,
+    longitude: Number(dto.location && dto.location.longitude) || 0,
   };
 }
 
@@ -329,4 +331,24 @@ export function daysBeforeStop(groups, stopId) {
 // Body for POST days/batch from the server's generated days ({name, description}).
 export function generatedDaysBody(stopId, order, generated) {
   return { routeStopId: stopId, order, days: generated.map((day) => ({ title: day.name || null, description: day.description || '' })) };
+}
+
+// ---- map ----
+
+// Pins for the trip map: stops in route order, numbered like the Route list. A stop whose place has no
+// coordinates (the server stores 0, 0 for "unknown") is left off the map but still counts in the numbering.
+export function mapPins(groups) {
+  return groups
+    .filter((group) => group.stop.id !== null)
+    .map((group, index) => ({
+      id: group.stop.id,
+      number: index + 1,
+      name: group.stop.name,
+      latitude: group.stop.latitude,
+      longitude: group.stop.longitude,
+      meta: stopMeta(group.stop, group.days.length),
+    }))
+    .filter((pin) => Number.isFinite(pin.latitude) && Number.isFinite(pin.longitude)
+      && (pin.latitude !== 0 || pin.longitude !== 0)
+      && Math.abs(pin.latitude) <= 90 && Math.abs(pin.longitude) <= 180);
 }

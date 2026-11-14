@@ -15,8 +15,9 @@ test('plainLines turns rich text into safe plain lines', () => {
 });
 
 test('stopFromDto and dayFromDto fall back gracefully', () => {
-  assert.deepEqual(stopFromDto({ id: 1, order: 2, location: { name: 'Oslo' }, transport: 'Train', plannedDays: 3 }), { id: 1, order: 2, name: 'Oslo', plannedDays: 3, transport: 'Train' });
-  assert.deepEqual(stopFromDto({ id: 2 }), { id: 2, order: 0, name: 'Unnamed stop', plannedDays: 1, transport: null });
+  assert.deepEqual(stopFromDto({ id: 1, order: 2, location: { name: 'Oslo' }, transport: 'Train', plannedDays: 3 }), { id: 1, order: 2, name: 'Oslo', plannedDays: 3, transport: 'Train', latitude: 0, longitude: 0 });
+  assert.deepEqual(stopFromDto({ id: 2 }), { id: 2, order: 0, name: 'Unnamed stop', plannedDays: 1, transport: null, latitude: 0, longitude: 0 });
+  assert.deepEqual([stopFromDto({ id: 3, location: { latitude: 59.9, longitude: 10.7 } }).latitude, stopFromDto({ id: 3, location: { latitude: '59.9', longitude: 'x' } }).longitude], [59.9, 0]);
   assert.deepEqual(dayFromDto({ id: 5, routeStopId: 1, order: 0, title: ' Hi ', description: '<p>x</p>' }), { id: 5, order: 0, stopId: 1, title: 'Hi', plan: ['x'] });
 });
 
@@ -182,4 +183,20 @@ test('AI helpers', async () => {
   assert.deepEqual(m.generatedDaysBody(2, 2, [{ name: 'A', description: '<p>x</p>' }, { name: '', description: null }]),
     { routeStopId: 2, order: 2, days: [{ title: 'A', description: '<p>x</p>' }, { title: null, description: '' }] });
   assert.equal(m.importOutcome({ tripId: null }, 'custom').reason, 'custom');
+});
+
+test('mapPins numbers stops like the route list and leaves out places without coordinates', async () => {
+  const { mapPins } = await import('../../js/trip-model.js');
+  const stop = (id, name, latitude, longitude) => ({ id, name, latitude, longitude, plannedDays: 2, transport: null });
+  const groups = [
+    { stop: stop(1, 'Oslo', 59.9, 10.7), days: [{}, {}] },
+    { stop: stop(2, 'Nowhere', 0, 0), days: [] },
+    { stop: stop(3, 'Bad', 123, 10), days: [] },
+    { stop: stop(4, 'Bergen', 60.4, 5.3), days: [{}] },
+    { stop: { id: null, name: 'Other days', latitude: 1, longitude: 1 }, days: [{}] },
+  ];
+  const pins = mapPins(groups);
+  assert.deepEqual(pins.map((p) => [p.number, p.name]), [[1, 'Oslo'], [4, 'Bergen']]);
+  assert.equal(pins[0].meta, 'Planned: 2 · Actual: 2');
+  assert.deepEqual(mapPins([]), []);
 });

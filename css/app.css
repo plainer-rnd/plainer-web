@@ -508,3 +508,12 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .btn-primary .spinner.small{border-color:rgba(255,255,255,.45);border-top-color:#fff;margin-bottom:-2px}
 .pl .option-card .btn:disabled{opacity:1}
 .pl .option-card .btn:disabled:not(:has(.spinner)){opacity:.5}
+
+/* Trip map */
+.pl .trip-map-pane{margin:0 0 24px}
+.pl .trip-map-pane[hidden]{display:none!important}
+.pl .trip-map{height:340px;border:1px solid var(--line);border-radius:16px;overflow:hidden;isolation:isolate;background:var(--field)}
+.pl .map-pin-wrap{background:none;border:0}
+.pl .map-pin{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font:700 14px/1 Inter,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.pl .map-popup{display:flex;flex-direction:column;gap:2px;font:14px/1.3 Inter,system-ui,sans-serif}
+@media (max-width:720px){.pl .trip-map{height:280px}.pl .trip-map-pane{margin-bottom:16px}}

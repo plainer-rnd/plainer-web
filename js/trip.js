@@ -7,7 +7,7 @@ import {
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
   pdfFileName, insertIndexForStop, duplicateDayBody, stopDropIds, dayDropOrder,
-  daysBeforeStop, generatedDaysBody,
+  daysBeforeStop, generatedDaysBody, mapPins,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
@@ -15,6 +15,7 @@ import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
 import { openGenerateDaysDialog } from './ai-days-dialog.js';
+import { createTripMap } from './trip-map.js';
 import { openReviewDialog } from './validation-review.js';
 import { readDismissed, reviewCounts, writeDismissed } from './validation-model.js';
 
@@ -45,6 +46,7 @@ const nodes = {
   app: document.getElementById('trip-app'),
   name: document.getElementById('trip-name'),
   status: document.getElementById('trip-status'),
+  mapPane: document.getElementById('pane-map'),
   draftToggle: document.getElementById('draft-toggle'),
   draftSwitch: document.getElementById('draft-switch'),
   draftLabel: document.getElementById('draft-label'),
@@ -70,6 +72,8 @@ const nodes = {
   menuButton: document.getElementById('trip-menu-button'),
   menu: document.getElementById('trip-menu'),
 };
+
+const tripMap = createTripMap({ section: nodes.mapPane, canvas: document.getElementById('trip-map') });
 
 // ---- autosave ----
 
@@ -479,6 +483,8 @@ function renderHeader() {
 
 function renderPanes() {
   nodes.panes.forEach((pane) => pane.classList.toggle('active', pane.dataset.pane === state.pane));
+  // The map sits above the Stops and Days lists (on a phone: on both of those tabs, not on Overview).
+  nodes.mapPane.classList.toggle('active', state.pane === 'stops' || state.pane === 'days');
   nodes.paneTabs.forEach((tab) => {
     const on = tab.dataset.pane === state.pane;
     tab.classList.toggle('on', on);
@@ -493,6 +499,7 @@ function render() {
   renderDays();
   renderRoute();
   renderPanes();
+  tripMap.update(mapPins(state.groups));
   nodes.daysSub.textContent = `· ${plural(state.days.filter(hasPlan).length, 'day')} with a plan`;
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();
