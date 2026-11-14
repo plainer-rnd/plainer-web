@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=21">
+<link rel="stylesheet" href="/css/app.css?v=24">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/trip.js?v=5"></script>
+<script type="module" src="/js/trip.js?v=8"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -54,6 +54,7 @@
       <h1 class="display trip-title" id="trip-name"></h1>
       <div class="trip-meta t2">
         <span class="badge" id="trip-status"></span>
+        <label class="draft-toggle" id="draft-toggle" hidden><input type="checkbox" role="switch" id="draft-switch" aria-label="Draft"><span id="draft-label"></span></label>
         <span id="trip-dates"></span>
         <span aria-hidden="true" class="muted">·</span>
         <span id="trip-owner"></span>
@@ -66,6 +67,8 @@
         <span id="save-text"></span>
         <button type="button" class="link-btn" id="save-retry" hidden>Retry</button>
       </div>
+      <button type="button" class="btn btn-outline btn-sm" id="share-btn" aria-label="Share" hidden><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5"></path><path d="M19 8v6M16 11h6"></path></svg><span class="btn-label">Share</span></button>
+      <button type="button" class="btn btn-outline btn-sm" id="export-btn" aria-label="Export PDF" hidden><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg><span class="btn-label">Export PDF</span></button>
       <div class="account" id="trip-menu-wrap">
         <button type="button" class="icon-btn" id="trip-menu-button" aria-label="More trip actions" aria-haspopup="true" aria-expanded="false" aria-controls="trip-menu"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
         <div class="menu account-menu" id="trip-menu" hidden></div>

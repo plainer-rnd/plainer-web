@@ -239,3 +239,18 @@ export function dayDropOrder(groups, day, target, after) {
   const to = next.indexOf(day);
   return from === to ? null : group.days[0].number - 1 + to;
 }
+
+// ---- sharing and export ----
+
+export function shareErrorMessage(status, email) {
+  if (status === 404) return `${email} doesn’t have a Plainer account yet. Ask them to sign up first, then share again.`;
+  if (status === 0) return 'Check your internet connection and try again.';
+  if (status === 400) return 'That email address doesn’t look right.';
+  return 'Couldn’t share the trip. Please try again.';
+}
+
+// "Plainer – Scotland.pdf": safe for any file system.
+export function pdfFileName(tripName) {
+  const clean = String(tripName).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  return `Plainer – ${clean || 'Trip'}.pdf`;
+}
