@@ -98,7 +98,7 @@ export function openReviewDialog({ api, tripId, getValidation, getDismissed, set
     const apply = async (option, trigger, applyButtons) => {
       error.textContent = '';
       applyButtons.forEach((node) => { node.disabled = true; });
-      trigger.textContent = 'Applying…';
+      trigger.replaceChildren(el('span', { class: 'spinner small', 'aria-hidden': 'true' }), 'Applying…');
       const request = fixRequestFrom(option.fixInfo, tripId);
       try {
         if (!request) throw Object.assign(new Error('This fix can’t be applied from the web. Use the Plainer app.'), { status: 400 });

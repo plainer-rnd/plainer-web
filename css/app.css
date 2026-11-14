@@ -505,3 +505,6 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .option-card p{margin:0!important;font-size:14px;flex:1}
 .pl .spinner.small{display:inline-block;width:14px;height:14px;margin:0 6px -2px 0;border-width:2px}
 @media (max-width:640px){.pl .issue-actions .btn,.pl .option-card .btn,.pl .review-back .btn{min-height:44px}.pl .option-card{flex-direction:column;align-items:stretch}}
+.pl .btn-primary .spinner.small{border-color:rgba(255,255,255,.45);border-top-color:#fff;margin-bottom:-2px}
+.pl .option-card .btn:disabled{opacity:1}
+.pl .option-card .btn:disabled:not(:has(.spinner)){opacity:.5}

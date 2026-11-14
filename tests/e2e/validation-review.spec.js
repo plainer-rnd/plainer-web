@@ -62,6 +62,22 @@ test('applying “Generate days” saves the generated days into the stop and cl
   await expect(page.locator('#pane-overview')).toContainText('Fix 2 validation issues');
 });
 
+test('while a fix is being applied the button shows a spinner', async ({ page }) => {
+  await mockApi(page);
+  await page.route('**/generate-days', async (route) => { await new Promise((r) => setTimeout(r, 700)); await route.fallback(); });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/trip/?id=1');
+  await page.getByRole('button', { name: 'Review', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Review your trip' });
+  await dialog.locator('.issue-card', { hasText: 'Flåm has no days' }).getByRole('button', { name: 'Fix this' }).click();
+  await dialog.getByRole('button', { name: 'Apply' }).first().click();
+  const busy = dialog.getByRole('button', { name: 'Applying…' });
+  await expect(busy).toBeVisible();
+  await expect(busy.locator('.spinner')).toBeVisible();
+  await expect(busy).toBeDisabled();
+  await expect(dialog.getByRole('status')).toHaveText('Fix applied.');
+});
+
 test('applying “Remove stop” runs the server’s call and the page reflects it', async ({ page }) => {
   const requests = [];
   const dialog = await openReview(page, { requests });
