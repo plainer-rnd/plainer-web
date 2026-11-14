@@ -170,9 +170,11 @@ test('AI helpers', async () => {
   assert.equal(m.expressProblem('  '), 'Describe your trip first.');
   assert.equal(m.expressProblem('x'.repeat(501)), 'Please keep it under 500 characters.');
   assert.equal(m.expressProblem('Rome'), null);
-  assert.match(m.aiErrorMessage(0), /internet/);
-  assert.match(m.aiErrorMessage(429), /Too many/);
+  assert.match(m.aiErrorMessage(0), /didn’t get an answer/);
+  assert.match(m.aiErrorMessage(429, 'Request failed with status 429'), /Too many/);
   assert.equal(m.aiErrorMessage(400, 'Instructions are required.'), 'Instructions are required.');
+  assert.equal(m.aiErrorMessage(500, 'The AI service is busy.'), 'The AI service is busy.');
+  assert.match(m.aiErrorMessage(500, 'Request failed with status 500'), /Couldn’t plan that right now/);
   const groups = [{ stop: { id: 1 }, days: [{}, {}] }, { stop: { id: 2 }, days: [{}] }, { stop: { id: 3 }, days: [] }];
   assert.equal(m.daysBeforeStop(groups, 1), 0);
   assert.equal(m.daysBeforeStop(groups, 2), 2);

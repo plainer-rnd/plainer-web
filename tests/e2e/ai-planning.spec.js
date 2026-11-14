@@ -73,11 +73,11 @@ test.describe('Plan with AI (trips list)', () => {
   });
 
   test('server errors show a message', async ({ page }) => {
-    await mockApi(page, { expressStatus: 500 });
+    await mockApi(page, { expressStatus: 500, expressMessage: 'Failed to generate the trip: the AI service is busy.' });
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('Rome');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();
-    await expect(page.getByRole('dialog', { name: 'Plan with AI' }).getByRole('alert')).toContainText('Couldn’t plan that right now');
+    await expect(page.getByRole('dialog', { name: 'Plan with AI' }).getByRole('alert')).toContainText('Failed to generate the trip: the AI service is busy.');
     await expect(page.getByLabel('Describe your trip')).toHaveValue('Rome');
   });
 });
@@ -147,10 +147,10 @@ test.describe('Generate days with AI (stop editor)', () => {
 
   test('a failure keeps the trip unchanged and lets you retry', async ({ page }) => {
     const requests = [];
-    await mockApi(page, { requests, generateStatus: 500 });
+    await mockApi(page, { requests, generateStatus: 500, generateMessage: 'Not enough information about this place.' });
     const dialog = await openGenerate(page, 'Flåm');
     await dialog.getByRole('button', { name: 'Generate days' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Couldn’t plan that right now');
+    await expect(dialog.getByRole('alert')).toContainText('Not enough information about this place.');
     await expect(dialog.getByRole('button', { name: 'Generate days' })).toBeEnabled();
     expect(writes(requests).filter((r) => r.path.endsWith('/batch') || r.method === 'DELETE')).toHaveLength(0);
   });

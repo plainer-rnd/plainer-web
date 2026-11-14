@@ -307,9 +307,11 @@ export function expressProblem(text) {
   return null;
 }
 
+// The server's own message is shown whenever it sent one. Status 0 means no response arrived at all
+// (a dropped connection or a timeout), which for a long AI request is usually not the user's internet.
 export function aiErrorMessage(status, serverMessage) {
-  if (status === 0) return 'Check your internet connection and try again.';
-  if (status === 400) return serverMessage && !/^Request failed/.test(serverMessage) ? serverMessage : 'That request can’t be planned.';
+  if (status === 0) return 'We didn’t get an answer from the server. Planning can take a while, so it may have timed out. Please try again.';
+  if (serverMessage && !/^Request failed with status/.test(serverMessage)) return serverMessage;
   if (status === 429) return 'Too many requests right now. Wait a moment and try again.';
   return 'Couldn’t plan that right now. Please try again.';
 }
