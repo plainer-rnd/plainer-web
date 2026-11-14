@@ -46,9 +46,14 @@ test('days have no move buttons; Duplicate and Delete sit in the header row and 
   expect(await opacity(actions)).toBe('1'); // day 1 is open
   await row.getByRole('button', { name: 'Collapse day 1' }).click();
   await page.mouse.move(0, 0);
-  await page.evaluate(() => document.activeElement.blur()); // keyboard focus on the row also shows the actions
   await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('0');
   await page.locator('.day-row').first().hover();
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('1');
+  // Keyboard users still get them: focus the row's collapse button with Tab.
+  await page.mouse.move(0, 0);
+  await page.locator('.day-row').first().getByRole('button', { name: 'Expand day 1' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
   await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('1');
 });
 
