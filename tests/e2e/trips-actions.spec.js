@@ -14,7 +14,7 @@ test('the menu on an owned trip offers Open, Duplicate and Delete', async ({ pag
   await mockApi(page);
   await page.goto('/trips/');
   await page.getByRole('button', { name: 'Actions for Scotland' }).click();
-  await expect(page.getByRole('menuitem')).toHaveText(['Open', 'Duplicate', 'Delete…']);
+  await expect(page.getByRole('menuitem')).toHaveText(['Open', 'Duplicate', 'Mark as draft', 'Delete…']);
   await expect(page.getByRole('menuitem', { name: 'Open' })).toHaveAttribute('href', '/trip/?id=2');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toHaveCount(0);
@@ -111,4 +111,13 @@ test('an empty list offers New trip and the app link', async ({ page }) => {
   await page.goto('/trips/');
   await expect(page.getByRole('button', { name: 'New trip' })).toHaveCount(2);
   await expect(page.getByRole('link', { name: 'Get the iPhone app' })).toBeVisible();
+});
+
+test('Mark as ready / Mark as draft changes a trip from the list', async ({ page }) => {
+  const requests = [];
+  await mockApi(page, { requests });
+  await page.goto('/trips/');
+  await page.getByRole('button', { name: 'Actions for France' }).click();
+  await page.getByRole('menuitem', { name: 'Mark as ready' }).click();
+  await expect.poll(() => writes(requests).find((r) => r.path === '/api/trips/4')?.body).toMatchObject({ name: 'France', isDraft: false, startDate: '0001-01-01T00:00:00Z' });
 });

@@ -124,3 +124,14 @@ test('drag and drop helpers', () => {
   const second = groups[1].days[0];
   assert.equal(dayDropOrder(groups, second, second, true), null);
 });
+
+import { shareErrorMessage, pdfFileName } from '../../js/trip-model.js';
+
+test('share error messages and pdf file names', () => {
+  assert.match(shareErrorMessage(404, 'a@x.co'), /a@x\.co doesn’t have a Plainer account/);
+  assert.match(shareErrorMessage(0, 'a@x.co'), /internet/);
+  assert.match(shareErrorMessage(500, 'a@x.co'), /Couldn’t share/);
+  assert.equal(pdfFileName('2 weeks in Norway'), 'Plainer – 2 weeks in Norway.pdf');
+  assert.equal(pdfFileName('a/b:c*?"<>|d'), 'Plainer – a b c d.pdf');
+  assert.equal(pdfFileName('   '), 'Plainer – Trip.pdf');
+});

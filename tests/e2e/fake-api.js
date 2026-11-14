@@ -68,6 +68,22 @@ async function mockApi(page, options = {}) {
       ? json(options.tripsStatus, { error: 'boom' })
       : json(200, { requestId: 'r', result: trips });
     if (url.pathname === '/api/trip-shares/by') return json(200, { requestId: 'r', result: sharedBy });
+    if (url.pathname.endsWith('/export/pdf')) {
+      if (options.exportStatus) return json(options.exportStatus, { error: 'boom' });
+      return route.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'access-control-allow-origin': '*' }, body: '%PDF-1.4 fake' });
+    }
+    if (url.pathname === '/api/trip-shares' && request.method() === 'POST') {
+      const body = JSON.parse(request.postData());
+      if (!/known/.test(body.emails[0])) return json(404, { error: 'not found' });
+      const list = (options.shares = options.shares || {});
+      (list[body.tripId] = list[body.tripId] || []).push({ sharedWith: body.emails[0], shareId: 700 + (list[body.tripId].length) });
+      return json(201, { requestId: 'r', result: { tripId: body.tripId, shares: [{ sharedWith: body.emails[0], shareId: 700 }] } });
+    }
+    const unshare = url.pathname.match(/^\/api\/trip-shares\/(\d+)$/);
+    if (unshare && request.method() === 'DELETE') {
+      for (const id of Object.keys(options.shares || {})) options.shares[id] = options.shares[id].filter((x) => String(x.shareId) !== unshare[1]);
+      return json(200, { requestId: 'r', result: {} });
+    }
     if (url.pathname.endsWith('/locations') && request.method() === 'GET') {
       return json(200, { requestId: 'r', result: { sessionToken: 'tok', locations: [{ id: 'g-Stavanger', mainText: 'Stavanger', secondaryText: 'Norway' }] } });
     }

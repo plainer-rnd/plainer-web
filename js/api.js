@@ -15,12 +15,15 @@ async function readBody(response) {
 }
 
 export function createApi(user) {
-  async function send(method, endpoint, { params, body } = {}, forceRefresh = false) {
+  async function send(method, endpoint, { params, body, form } = {}, forceRefresh = false) {
     const token = await user.getIdToken(forceRefresh);
+    // A FormData body sets its own multipart Content-Type (with the boundary), so it must not be set here.
+    const headers = { Authorization: 'Bearer ' + token };
+    if (!form) headers['Content-Type'] = 'application/json';
     return fetch(buildUrl(config.apiBaseUrl, endpoint, params), {
       method,
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers,
+      body: form || (body === undefined ? undefined : JSON.stringify(body)),
     });
   }
 
@@ -38,7 +41,22 @@ export function createApi(user) {
     return unwrap(parsed);
   }
 
+  // For files (PDF export): returns the Blob instead of parsed JSON.
+  async function download(endpoint) {
+    let response;
+    try {
+      response = await send('GET', endpoint);
+      if (response.status === 401) response = await send('GET', endpoint, {}, true);
+    } catch (error) {
+      throw new ApiError(0, 'Network error');
+    }
+    if (!response.ok) throw new ApiError(response.status, errorMessageFrom(await readBody(response), response.status));
+    return response.blob();
+  }
+
   return {
+    download,
+    postForm: (endpoint, form) => request('POST', endpoint, { form }),
     get: (endpoint, params) => request('GET', endpoint, { params }),
     post: (endpoint, body) => request('POST', endpoint, { body }),
     put: (endpoint, body) => request('PUT', endpoint, { body }),
