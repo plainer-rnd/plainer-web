@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=42">
+<link rel="stylesheet" href="/css/app.css?v=43">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/profile.js?v=1"></script>
+<script type="module" src="/js/profile.js?v=2"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -50,6 +50,11 @@
       </dl>
       <p class="hint">Your name is what people you share trips with see.</p>
       <button type="button" class="btn btn-outline" id="profile-logout">Log out</button>
+    </section>
+    <section class="panel profile-card danger-zone" aria-labelledby="danger-title">
+      <h2 class="card-title" id="danger-title">Delete account</h2>
+      <p class="t2">Permanently delete your Plainer account. You won’t be able to log in with it again, on the web or in the iPhone app. This can’t be undone.</p>
+      <button type="button" class="btn btn-danger-outline" id="delete-account">Delete account…</button>
     </section>
   </div>
 </main>
