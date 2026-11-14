@@ -97,6 +97,7 @@ test.describe('Generate days with AI (stop editor)', () => {
     await expect(dialog.getByRole('radio')).toHaveCount(0);
     await expect(dialog.locator('.stepper')).toContainText('3');
     await dialog.getByRole('button', { name: 'Generate days' }).click();
+    await expect(page.getByRole('dialog', { name: 'Generate days for Flåm' })).toHaveCount(0);
     await expect(headings(page)).toHaveText(['Oslo · 2 days', 'Bergen · 1 day', 'Flåm · 3 days']);
     const generate = writes(requests).find((r) => r.path.endsWith('/generate-days'));
     expect(generate.path).toBe('/api/trips/1/route-stops/13/generate-days');
@@ -136,6 +137,24 @@ test.describe('Generate days with AI (stop editor)', () => {
     expect(writes(requests).find((r) => r.path === '/api/trips/1/days/batch').body.order).toBe(2);
   });
 
+  test('while generating, a spinner dialog replaces the form', async ({ page }) => {
+    await mockApi(page);
+    await page.route('**/generate-days', async (route) => { await new Promise((r) => setTimeout(r, 600)); await route.fallback(); });
+    const dialog = await openGenerate(page, 'Flåm');
+    await dialog.getByRole('button', { name: 'Generate days' }).click();
+    await expect(page.getByRole('alertdialog', { name: 'Generating trip days…' })).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await expect(headings(page)).toHaveText(['Oslo · 2 days', 'Bergen · 1 day', 'Flåm · 3 days']);
+  });
+
+  test('the choices survive a failure (replace stays selected)', async ({ page }) => {
+    await mockApi(page, { generateStatus: 500, generateMessage: 'Nope.' });
+    const dialog = await openGenerate(page, 'Oslo');
+    await dialog.getByLabel(/Replace the 2 existing days/).check();
+    await dialog.getByRole('button', { name: 'Generate days' }).click();
+    await expect(page.getByLabel(/Replace the 2 existing days/)).toBeChecked();
+  });
+
   test('the number of days is limited to 7', async ({ page }) => {
     await mockApi(page);
     const dialog = await openGenerate(page, 'Flåm');
@@ -150,8 +169,11 @@ test.describe('Generate days with AI (stop editor)', () => {
     await mockApi(page, { requests, generateStatus: 500, generateMessage: 'Not enough information about this place.' });
     const dialog = await openGenerate(page, 'Flåm');
     await dialog.getByRole('button', { name: 'Generate days' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Not enough information about this place.');
-    await expect(dialog.getByRole('button', { name: 'Generate days' })).toBeEnabled();
+    const again = page.getByRole('dialog', { name: 'Generate days for Flåm' });
+    await expect(again.getByRole('alert')).toContainText('Not enough information about this place.');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(again.locator('.stepper')).toContainText('3');
+    await expect(again.getByRole('button', { name: 'Generate days' })).toBeEnabled();
     expect(writes(requests).filter((r) => r.path.endsWith('/batch') || r.method === 'DELETE')).toHaveLength(0);
   });
 

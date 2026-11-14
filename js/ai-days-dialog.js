@@ -1,11 +1,12 @@
 // "Generate days with AI" for one stop: asks how many days and whether to add or replace, calls the server
 // (which only writes the text), then hands the generated days back so the page can save them.
 import { el } from './dom.js';
-import { openDialog } from './dialogs.js';
+import { openDialog, progressDialog } from './dialogs.js';
 import { MAX_AI_DAYS, aiErrorMessage, plural } from './trip-model.js';
 
-export function openGenerateDaysDialog({ api, tripId, stop, existingCount, onGenerated }) {
-  let count = Math.min(Math.max(stop.plannedDays || 1, 1), MAX_AI_DAYS);
+// `previous` brings the dialog back after a failure with the same choices and the error message.
+export function openGenerateDaysDialog({ api, tripId, stop, existingCount, onGenerated, previous = {} }) {
+  let count = previous.count || Math.min(Math.max(stop.plannedDays || 1, 1), MAX_AI_DAYS);
   const value = el('span', { class: 'stepper-value', 'aria-live': 'polite', text: String(count) });
   const minus = el('button', { type: 'button', 'aria-label': 'Fewer days', text: '−' });
   const plus = el('button', { type: 'button', 'aria-label': 'More days', text: '+' });
@@ -27,21 +28,20 @@ export function openGenerateDaysDialog({ api, tripId, stop, existingCount, onGen
   const modes = existingCount
     ? el('fieldset', { class: 'radio-group' }, [
       el('legend', { class: 'label', text: 'Existing days' }),
-      radio('append', `Keep the ${plural(existingCount, 'day')} and add these after`, true),
-      radio('replace', `Replace the ${plural(existingCount, 'existing day')}`, false),
+      radio('append', `Keep the ${plural(existingCount, 'day')} and add these after`, previous.mode !== 'replace'),
+      radio('replace', `Replace the ${plural(existingCount, 'existing day')}`, previous.mode === 'replace'),
     ])
     : null;
 
-  const error = el('p', { class: 'error', role: 'alert' });
-  const progress = el('p', { class: 'muted', role: 'status', 'aria-live': 'polite', hidden: true });
+  const error = el('p', { class: 'error', role: 'alert', text: previous.error || '' });
   const cancel = el('button', { type: 'button', class: 'btn btn-outline', text: 'Cancel' });
   const submit = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Generate days' });
   const form = el('form', { method: 'dialog', novalidate: true }, [
     el('span', { class: 'label', text: 'How many days?' }), stepper,
-    modes, error, progress,
+    modes, error,
     el('div', { class: 'dialog-actions' }, [cancel, submit]),
   ]);
-  const { dialog, close } = openDialog({
+  const { close } = openDialog({
     title: `Generate days for ${stop.name}`,
     description: 'AI writes a suggested plan for each day. You can edit everything afterwards.',
     content: [form],
@@ -51,24 +51,23 @@ export function openGenerateDaysDialog({ api, tripId, stop, existingCount, onGen
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const replace = Boolean(modes && form.elements['ai-mode'].value === 'replace');
-    error.textContent = '';
-    [submit, minus, plus].forEach((control) => { control.disabled = true; });
-    progress.hidden = false;
-    progress.textContent = 'Writing your itinerary… this can take a minute.';
+    const mode = modes && form.elements['ai-mode'].value === 'replace' ? 'replace' : 'append';
+    // The form gives way to a progress dialog; on failure it comes back with the same choices and the error.
+    close();
+    const waiting = progressDialog('Generating trip days…');
+    let failure = '';
     try {
       const days = await api.post(`trips/${tripId}/route-stops/${stop.id}/generate-days`, { numberOfDays: count });
-      if (!dialog.isConnected) return; // closed while waiting: don't change the trip behind their back
-      if (!days || !days.length) throw new Error('empty');
-      close();
-      onGenerated(days, replace ? 'replace' : 'append');
-      return;
-    } catch (failure) {
-      if (!dialog.isConnected) return;
-      error.textContent = failure.message === 'empty' ? 'No days came back. Please try again.' : aiErrorMessage(failure.status, failure.message);
+      waiting.close();
+      if (days && days.length) {
+        onGenerated(days, mode);
+        return;
+      }
+      failure = 'No days came back. Please try again.';
+    } catch (caught) {
+      waiting.close();
+      failure = aiErrorMessage(caught.status, caught.message);
     }
-    progress.hidden = true;
-    submit.disabled = false;
-    sync();
+    openGenerateDaysDialog({ api, tripId, stop, existingCount, onGenerated, previous: { count, mode, error: failure } });
   });
 }
