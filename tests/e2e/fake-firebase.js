@@ -1,5 +1,6 @@
 // Replaces config.js and the Firebase CDN modules so the E2E tests need no network or credentials.
-const FAKE_CONFIG = `export const config = { name: 'test', firebase: { apiKey: 'test', authDomain: 'test' }, apiBaseUrl: 'https://api.test' };`;
+const FAKE_CONFIG = `export const config = { name: 'test', firebase: { apiKey: 'test', authDomain: 'test' }, apiBaseUrl: 'https://api.test' };
+export const mapTiles = { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: 'OSM', maxZoom: 19 };`;
 
 const FAKE_APP = `export const initializeApp = () => ({});`;
 

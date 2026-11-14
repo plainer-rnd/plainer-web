@@ -7,7 +7,7 @@ import {
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
   pdfFileName, insertIndexForStop, duplicateDayBody, stopDropIds, dayDropOrder,
-  daysBeforeStop, generatedDaysBody,
+  daysBeforeStop, generatedDaysBody, mapPins,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
@@ -15,6 +15,7 @@ import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
 import { openGenerateDaysDialog } from './ai-days-dialog.js';
+import { createTripMap } from './trip-map.js';
 import { openReviewDialog } from './validation-review.js';
 import { readDismissed, reviewCounts, writeDismissed } from './validation-model.js';
 
@@ -45,6 +46,7 @@ const nodes = {
   app: document.getElementById('trip-app'),
   name: document.getElementById('trip-name'),
   status: document.getElementById('trip-status'),
+  mapPane: document.getElementById('pane-map'),
   draftToggle: document.getElementById('draft-toggle'),
   draftSwitch: document.getElementById('draft-switch'),
   draftLabel: document.getElementById('draft-label'),
@@ -70,6 +72,23 @@ const nodes = {
   menuButton: document.getElementById('trip-menu-button'),
   menu: document.getElementById('trip-menu'),
 };
+
+const tripMap = createTripMap({ section: nodes.mapPane, canvas: document.getElementById('trip-map') });
+
+// Hovering (or keyboard-focusing) a stop in the Route list highlights its pin on the map.
+(() => {
+  const stopIdOf = (event) => {
+    const row = event.target.closest && event.target.closest('[data-stop-id]');
+    return row && nodes.routeList.contains(row) ? Number(row.dataset.stopId) : null;
+  };
+  const canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+  if (canHover) {
+    nodes.routeList.addEventListener('mouseover', (event) => tripMap.highlight(stopIdOf(event)));
+    nodes.routeList.addEventListener('mouseleave', () => tripMap.highlight(null));
+  }
+  nodes.routeList.addEventListener('focusin', (event) => tripMap.highlight(stopIdOf(event)));
+  nodes.routeList.addEventListener('focusout', () => tripMap.highlight(null));
+})();
 
 // ---- autosave ----
 
@@ -391,7 +410,7 @@ function stopRow(group, index) {
   const number = el('span', { class: 'num', text: String(index + 1) });
 
   if (canEdit() && state.editingStop === stop.id) {
-    const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
+    const editor = el('div', { class: 'stop-row stop-edit', 'data-stop-id': String(stop.id), role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
       el('div', { class: 'stop-edit-body' }, [
         el('span', { class: 'day-title', text: stop.name }),
@@ -412,7 +431,7 @@ function stopRow(group, index) {
     el('span', { class: 'day-title', text: stop.name }),
     el('span', { class: 'muted small', text: stopMeta(stop, group.days.length) }),
   ]);
-  if (!canEdit()) return el('div', { class: 'stop-row' }, [number, text]);
+  if (!canEdit()) return el('div', { class: 'stop-row', 'data-stop-id': String(stop.id) }, [number, text]);
 
   const open = el('button', { type: 'button', class: 'stop-open', 'data-stop-open': String(stop.id), 'aria-label': `Edit stop ${stop.name}`, 'aria-expanded': 'false' }, [
     text,
@@ -424,7 +443,7 @@ function stopRow(group, index) {
     const done = document.querySelector('.stop-edit .stepper button:not(:disabled)');
     if (done) done.focus();
   });
-  const row = el('div', { class: 'stop-row' }, [number, open]);
+  const row = el('div', { class: 'stop-row', 'data-stop-id': String(stop.id) }, [number, open]);
   dragAndDrop(row, { kind: 'stop', scope: 'route', item: stop, onDrop: dropStop });
   return row;
 }
@@ -479,6 +498,8 @@ function renderHeader() {
 
 function renderPanes() {
   nodes.panes.forEach((pane) => pane.classList.toggle('active', pane.dataset.pane === state.pane));
+  // The map sits above the Stops and Days lists (on a phone: on both of those tabs, not on Overview).
+  nodes.mapPane.classList.toggle('active', state.pane === 'stops' || state.pane === 'days');
   nodes.paneTabs.forEach((tab) => {
     const on = tab.dataset.pane === state.pane;
     tab.classList.toggle('on', on);
@@ -493,6 +514,7 @@ function render() {
   renderDays();
   renderRoute();
   renderPanes();
+  tripMap.update(mapPins(state.groups));
   nodes.daysSub.textContent = `· ${plural(state.days.filter(hasPlan).length, 'day')} with a plan`;
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();

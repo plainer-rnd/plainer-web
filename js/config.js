@@ -21,6 +21,14 @@ const environments = {
   },
 };
 
+// Map tiles for the trip map (shown with Leaflet). OpenStreetMap's public tile server needs no key but is meant for
+// light use; to switch provider, change the URL and attribution here.
+export const mapTiles = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+};
+
 const prodHosts = ['plainer.co.uk', 'www.plainer.co.uk'];
 
 export const config = prodHosts.includes(location.hostname) ? environments.prod : environments.dev;
