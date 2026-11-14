@@ -40,6 +40,8 @@ const nodes = {
   app: document.getElementById('trip-app'),
   name: document.getElementById('trip-name'),
   status: document.getElementById('trip-status'),
+  draftToggle: document.getElementById('draft-toggle'),
+  draftSwitch: document.getElementById('draft-switch'),
   dates: document.getElementById('trip-dates'),
   owner: document.getElementById('trip-owner'),
   people: document.getElementById('trip-people'),
@@ -431,6 +433,8 @@ function renderHeader() {
   }
   nodes.status.className = `badge b-${status}`;
   nodes.status.textContent = STATUS_LABEL[status];
+  nodes.draftToggle.hidden = !canEdit();
+  nodes.draftSwitch.checked = trip.isDraft;
   const datesText = tripDatesLabel(trip.startDate, state.days.length);
   if (canEdit()) {
     nodes.dates.replaceChildren(editable({
@@ -735,6 +739,7 @@ function renderMenu() {
 }
 
 nodes.addStop.addEventListener('click', addStop);
+nodes.draftSwitch.addEventListener('change', () => editTrip('isDraft', nodes.draftSwitch.checked));
 
 nodes.shareBtn.addEventListener('click', () => {
   openShareDialog({

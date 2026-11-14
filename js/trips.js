@@ -8,7 +8,7 @@ import {
 } from './trips-model.js';
 import { el, svg } from './dom.js';
 import { confirmDialog, openDialog } from './dialogs.js';
-import { newTripBody, parseDateInput } from './trip-model.js';
+import { dateToApi, newTripBody, parseDateInput } from './trip-model.js';
 
 const VIEW_KEY = 'plainerTripsView';
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
@@ -96,6 +96,21 @@ async function duplicate(trip) {
   }
 }
 
+async function setDraft(trip, isDraft) {
+  try {
+    await api.put(`trips/${trip.id}`, {
+      name: trip.name,
+      startDate: trip.startDate ? dateToApi(trip.startDate) : '0001-01-01T00:00:00Z',
+      description: trip.description ?? null,
+      isDraft,
+    });
+    await refresh();
+    nodes.announce.textContent = isDraft ? `“${trip.name}” is now a draft.` : `“${trip.name}” is no longer a draft.`;
+  } catch (error) {
+    nodes.announce.textContent = 'Couldn’t change the trip status. Please try again.';
+  }
+}
+
 function remove(trip) {
   confirmDialog({
     title: 'Delete this trip?',
@@ -129,7 +144,7 @@ function openMenu(button, trip) {
     el('a', { role: 'menuitem', href: tripHref(trip), text: 'Open' }),
     ...(isShared(trip)
       ? [item('Leave trip…', () => leave(trip), 'danger')]
-      : [item('Duplicate', () => duplicate(trip)), item('Delete…', () => remove(trip), 'danger')]),
+      : [item('Duplicate', () => duplicate(trip)), item(trip.isDraft ? 'Mark as ready' : 'Mark as draft', () => setDraft(trip, !trip.isDraft)), item('Delete…', () => remove(trip), 'danger')]),
   ];
   const menu = el('div', { class: 'menu trip-menu', role: 'menu', 'aria-label': `Actions for ${trip.name}` }, items);
   const box = button.getBoundingClientRect();
