@@ -16,6 +16,7 @@ import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
 import { openGenerateDaysDialog } from './ai-days-dialog.js';
 import { createTripMap } from './trip-map.js';
+import { createTripChat } from './trip-chat.js';
 import { openReviewDialog } from './validation-review.js';
 import { readDismissed, reviewCounts, writeDismissed } from './validation-model.js';
 
@@ -66,6 +67,7 @@ const nodes = {
   live: document.getElementById('trip-status-live'),
   readonlyNote: document.getElementById('readonly-note'),
   addStop: document.getElementById('add-stop'),
+  assistantBtn: document.getElementById('assistant-btn'),
   shareBtn: document.getElementById('share-btn'),
   exportBtn: document.getElementById('export-btn'),
   menuWrap: document.getElementById('trip-menu-wrap'),
@@ -536,6 +538,7 @@ function render() {
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();
   nodes.shareBtn.hidden = !canEdit();
+  nodes.assistantBtn.hidden = !canEdit();
   nodes.exportBtn.hidden = false;
 }
 
@@ -828,6 +831,14 @@ function renderMenu() {
 
 nodes.addStop.addEventListener('click', addStop);
 nodes.draftSwitch.addEventListener('change', () => editTrip('isDraft', nodes.draftSwitch.checked));
+
+let chat = null;
+
+nodes.assistantBtn.addEventListener('click', () => {
+  // One conversation per page visit. A change the assistant makes is read back like any other refresh.
+  if (!chat) chat = createTripChat({ api: state.api, tripId: state.id, onChanged: async () => { await load(state.api, state.id); render(); } });
+  chat.open();
+});
 
 nodes.shareBtn.addEventListener('click', () => {
   openShareDialog({
