@@ -225,16 +225,16 @@ function renderDays() {
 }
 
 function stopControls(stop) {
-  const nights = (delta) => {
-    const next = stop.nights + delta;
+  const planned = (delta) => {
+    const next = stop.plannedDays + delta;
     if (next < 1) return;
-    editStop(stop, { nights: next }, { plannedDays: next });
+    editStop(stop, { plannedDays: next }, { plannedDays: next });
   };
-  const minus = el('button', { type: 'button', 'aria-label': `Fewer nights in ${stop.name}`, text: '−' });
-  const plus = el('button', { type: 'button', 'aria-label': `More nights in ${stop.name}`, text: '+' });
-  minus.disabled = stop.nights <= 1;
-  minus.addEventListener('click', () => nights(-1));
-  plus.addEventListener('click', () => nights(1));
+  const minus = el('button', { type: 'button', 'aria-label': `Fewer planned days for ${stop.name}`, text: '−' });
+  const plus = el('button', { type: 'button', 'aria-label': `More planned days for ${stop.name}`, text: '+' });
+  minus.disabled = stop.plannedDays <= 1;
+  minus.addEventListener('click', () => planned(-1));
+  plus.addEventListener('click', () => planned(1));
 
   const select = el('select', { class: 'transport-select', 'aria-label': `Getting to ${stop.name}` }, [
     el('option', { value: '', text: 'Getting there' }),
@@ -247,7 +247,7 @@ function stopControls(stop) {
   });
 
   return el('div', { class: 'stop-controls' }, [
-    el('div', { class: 'stepper', role: 'group', 'aria-label': `Nights in ${stop.name}` }, [minus, el('span', { text: String(stop.nights) }), plus]),
+    el('div', { class: 'stepper', role: 'group', 'aria-label': `Planned days for ${stop.name}` }, [minus, el('span', { text: String(stop.plannedDays) }), plus]),
     select,
   ]);
 }

@@ -43,9 +43,9 @@ test.describe('trip details', () => {
     const headings = page.locator('#days-list .ghead');
     await expect(headings).toHaveText(['Oslo · 2 days', 'Bergen · 1 day', 'Flåm · 0 days']);
     await expect(page.locator('#route-list .stop-row')).toHaveCount(3);
-    await expect(page.locator('#route-list .stop-row').nth(0)).toContainText('2 nights · Flight · 2 days planned');
-    await expect(page.locator('#route-list .stop-row').nth(1)).toContainText('1 night · Train · 1 day planned');
-    await expect(page.locator('#route-list .stop-row').nth(2)).toContainText('3 nights · no days planned');
+    await expect(page.locator('#route-list .stop-row').nth(0)).toContainText('Planned: 2 · Actual: 2 · Flight');
+    await expect(page.locator('#route-list .stop-row').nth(1)).toContainText('Planned: 1 · Actual: 1 · Train');
+    await expect(page.locator('#route-list .stop-row').nth(2)).toContainText('Planned: 3 · Actual: 0');
   });
 
   test('the first day is open; days expand and collapse with aria-expanded', async ({ page }) => {

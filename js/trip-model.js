@@ -7,7 +7,7 @@ export function stopFromDto(dto) {
     id: dto.id,
     order: dto.order ?? 0,
     name: (dto.location && dto.location.name) || 'Unnamed stop',
-    nights: dto.plannedDays ?? 1,
+    plannedDays: dto.plannedDays ?? 1,
     transport: dto.transport || null,
   };
 }
@@ -47,9 +47,9 @@ export function plural(count, one, many = one + 's') {
 }
 
 export function stopMeta(stop, dayCount) {
-  const parts = [plural(stop.nights, 'night')];
+  // Same wording as the iOS route list: the target number of days vs the days actually added.
+  const parts = [`Planned: ${stop.plannedDays} · Actual: ${dayCount}`];
   if (stop.transport) parts.push(stop.transport);
-  parts.push(dayCount === 0 ? 'no days planned' : plural(dayCount, 'day') + ' planned');
   return parts.join(' · ');
 }
 

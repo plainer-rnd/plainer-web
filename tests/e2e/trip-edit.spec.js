@@ -79,16 +79,16 @@ test('editing a day title and plan saves each to its day', async ({ page }) => {
   expect(description.body).toEqual({ description: '<p>Fortress &lt;b&gt;tour&lt;/b&gt;</p><p>Harbour walk</p>' });
 });
 
-test('nights and transport are saved on the stop', async ({ page }) => {
+test('planned days and transport are saved on the stop', async ({ page }) => {
   const requests = [];
   await mockApi(page, { requests });
   await page.goto('/trip/?id=1');
 
-  await page.getByRole('button', { name: 'More nights in Oslo' }).click();
-  await expect(page.locator('#route-list .stop-row').first()).toContainText('3 nights');
+  await page.getByRole('button', { name: 'More planned days for Oslo' }).click();
+  await expect(page.locator('#route-list .stop-row').first()).toContainText('Planned: 3');
   await page.getByLabel('Getting to Oslo').selectOption('Cruise');
   await expect(page.locator('#route-list .stop-row').first()).toContainText('Cruise');
-  await expect(page.getByRole('button', { name: 'Fewer nights in Bergen' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Fewer planned days for Bergen' })).toBeDisabled();
 
   const stopWrites = writes(requests).filter((r) => r.path === '/api/trips/1/route-stops/11');
   expect(stopWrites.map((r) => r.body)).toEqual([{ plannedDays: 3 }, { transport: 'Cruise' }]);
@@ -178,7 +178,7 @@ test.describe('phone', () => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
     await page.getByRole('tab', { name: 'Stops' }).click();
-    const plus = page.getByRole('button', { name: 'More nights in Oslo' });
+    const plus = page.getByRole('button', { name: 'More planned days for Oslo' });
     const box = await plus.boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
