@@ -5,8 +5,11 @@ import { tripFromDto, resolveStatus, isShared } from './trips-model.js';
 import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
+  textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
+import { editable } from './inline-edit.js';
+import { createSaveQueue } from './save-queue.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -21,7 +24,12 @@ const state = {
   sharedBy: null,
   expanded: new Set(),
   pane: 'overview',
+  editingStop: null,
+  api: null,
+  id: null,
 };
+
+const canEdit = () => !isShared(state.trip);
 
 const nodes = {
   skeleton: document.getElementById('skeleton'),
@@ -39,7 +47,79 @@ const nodes = {
   routeList: document.getElementById('route-list'),
   panes: Array.from(document.querySelectorAll('.pane[data-pane]')),
   paneTabs: Array.from(document.querySelectorAll('.pane-tabs [data-pane]')),
+  saveStatus: document.getElementById('save-status'),
+  saveText: document.getElementById('save-text'),
+  saveRetry: document.getElementById('save-retry'),
+  live: document.getElementById('trip-status-live'),
+  readonlyNote: document.getElementById('readonly-note'),
+  menuWrap: document.getElementById('trip-menu-wrap'),
+  menuButton: document.getElementById('trip-menu-button'),
+  menu: document.getElementById('trip-menu'),
+  confirm: document.getElementById('confirm'),
 };
+
+// ---- autosave ----
+
+const SAVE_TEXT = { saving: 'Saving…', saved: '✓ All changes saved', error: 'Couldn’t save' };
+
+const queue = createSaveQueue({
+  onChange(status) {
+    nodes.saveStatus.hidden = status === 'idle';
+    nodes.saveStatus.dataset.status = status;
+    nodes.saveText.textContent = SAVE_TEXT[status] || '';
+    nodes.saveRetry.hidden = status !== 'error';
+    nodes.live.textContent = status === 'error' ? 'Couldn’t save your last change. Retry is available.' : SAVE_TEXT[status] || '';
+    if (status === 'error') render();
+  },
+});
+
+nodes.saveRetry.addEventListener('click', () => queue.retry().then(render));
+window.addEventListener('beforeunload', (event) => {
+  if (queue.isBusy()) event.preventDefault();
+});
+
+// Applies a change on screen straight away and sends it in the background.
+function save({ key, apply, send, revert }) {
+  queue.submit({ key, apply: () => { apply(); render(); }, send, revert: (error) => { revert(error); render(); } });
+}
+
+function tripBody() {
+  const { trip } = state;
+  return { name: trip.name, startDate: trip.startDate ? dateToApi(trip.startDate) : '0001-01-01T00:00:00Z', description: trip.description, isDraft: trip.isDraft };
+}
+
+function editTrip(field, value) {
+  const previous = state.trip[field];
+  save({
+    key: 'trip',
+    apply: () => { state.trip[field] = value; },
+    send: () => state.api.put(`trips/${state.id}`, tripBody()),
+    revert: () => { state.trip[field] = previous; },
+  });
+}
+
+function editDay(day, patch, body) {
+  const previous = {};
+  Object.keys(patch).forEach((name) => { previous[name] = day[name]; });
+  save({
+    key: `day-${day.id}`,
+    apply: () => Object.assign(day, patch),
+    send: () => state.api.put(`trips/${state.id}/days/${day.id}`, body),
+    revert: () => Object.assign(day, previous),
+  });
+}
+
+function editStop(stop, patch, body) {
+  const previous = {};
+  Object.keys(patch).forEach((name) => { previous[name] = stop[name]; });
+  save({
+    key: `stop-${stop.id}`,
+    apply: () => Object.assign(stop, patch),
+    send: () => state.api.put(`trips/${state.id}/route-stops/${stop.id}`, body),
+    revert: () => Object.assign(stop, previous),
+  });
+}
+
 
 function chevron(open) {
   const icon = svg('<path d="M6 9l6 6 6-6"></path>');
@@ -106,7 +186,9 @@ function dayRow(day) {
   const row = el('div', { class: 'hrow day-row' }, [
     el('span', { class: 'num', text: String(day.number) }),
     el('div', { class: 'day-text' }, [
-      el('span', { class: 'day-title', text: day.title || `Day ${day.number}` }),
+      canEdit()
+        ? editable({ value: day.title, display: day.title || `Day ${day.number}`, label: `title of day ${day.number}`, className: 'day-title', onCommit: (title) => editDay(day, { title }, { title }) })
+        : el('span', { class: 'day-title', text: day.title || `Day ${day.number}` }),
       date ? el('span', { class: 'muted small', text: date }) : null,
       !open && preview ? el('span', { class: 'muted small clamp1', text: preview }) : null,
     ]),
@@ -115,9 +197,16 @@ function dayRow(day) {
 
   const parts = [row];
   if (open) {
-    const plan = day.plan.length
-      ? day.plan.map((line) => el('p', { class: 't2', text: line }))
-      : [el('p', { class: 'muted', text: 'Nothing planned for this day yet.' })];
+    const commitPlan = (text) => {
+      const lines = textToLines(text);
+      if (sameLines(lines, day.plan)) return;
+      editDay(day, { plan: lines }, { description: linesToHtml(lines) });
+    };
+    const plan = canEdit()
+      ? [editable({ value: day.plan.join('\n'), label: `plan for day ${day.number}`, placeholder: 'Add a plan for this day', multiline: true, className: 'plan-edit t2', onCommit: commitPlan })]
+      : day.plan.length
+        ? day.plan.map((line) => el('p', { class: 't2', text: line }))
+        : [el('p', { class: 'muted', text: 'Nothing planned for this day yet.' })];
     parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan]));
   }
   return el('div', {}, parts);
@@ -136,16 +225,95 @@ function renderDays() {
   nodes.daysList.replaceChildren(...(groups.length ? groups : [el('p', { class: 'muted empty-note', text: 'No stops or days yet. Plan them in the Plainer app.' })]));
 }
 
-function renderRoute() {
-  const rows = state.groups.filter((group) => group.stop.id !== null).map((group, index) => (
-    el('div', { class: 'hrow stop-row' }, [
-      el('span', { class: 'num', text: String(index + 1) }),
-      el('div', { class: 'day-text' }, [
-        el('span', { class: 'day-title', text: group.stop.name }),
-        el('span', { class: 'muted small', text: stopMeta(group.stop, group.days.length) }),
+function stepperFor(stop) {
+  const planned = (delta) => {
+    const next = stop.plannedDays + delta;
+    if (next < 1) return;
+    editStop(stop, { plannedDays: next }, { plannedDays: next });
+  };
+  const minus = el('button', { type: 'button', 'aria-label': `Fewer planned days for ${stop.name}`, text: '−' });
+  const plus = el('button', { type: 'button', 'aria-label': `More planned days for ${stop.name}`, text: '+' });
+  minus.disabled = stop.plannedDays <= 1;
+  minus.addEventListener('click', () => planned(-1));
+  plus.addEventListener('click', () => planned(1));
+  return el('div', { class: 'stepper', role: 'group', 'aria-label': `Planned days for ${stop.name}` }, [minus, el('span', { text: String(stop.plannedDays) }), plus]);
+}
+
+function transportSelect(stop) {
+  const select = el('select', { class: 'transport-select', id: `transport-${stop.id}`, 'aria-label': `Getting to ${stop.name}` }, [
+    el('option', { value: '', text: 'Not set' }),
+    ...TRANSPORT_TYPES.map((type) => el('option', { value: type, text: type })),
+  ]);
+  select.value = stop.transport || '';
+  select.addEventListener('change', () => {
+    if (!select.value) { select.value = stop.transport || ''; return; }
+    editStop(stop, { transport: select.value }, { transport: select.value });
+  });
+  return select;
+}
+
+const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"></path>';
+
+function closeStopEditor({ restoreFocus = true } = {}) {
+  const id = state.editingStop;
+  if (id === null) return;
+  state.editingStop = null;
+  render();
+  const opener = restoreFocus ? document.querySelector(`[data-stop-open="${id}"]`) : null;
+  if (opener) opener.focus();
+}
+
+// Changes are already saved, so there is no Done button: a click or tap anywhere outside the open stop closes it.
+// (Clicks on another stop's row are left to that row, which opens it.)
+document.addEventListener('click', (event) => {
+  if (state.editingStop === null) return;
+  if (event.target.closest('.stop-edit, [data-stop-open]')) return;
+  closeStopEditor({ restoreFocus: false });
+});
+
+// One compact row per stop. Opening a stop turns just that row into an editor; only one is open at a time.
+function stopRow(group, index) {
+  const { stop } = group;
+  const number = el('span', { class: 'num', text: String(index + 1) });
+
+  if (canEdit() && state.editingStop === stop.id) {
+    const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
+      number,
+      el('div', { class: 'stop-edit-body' }, [
+        el('span', { class: 'day-title', text: stop.name }),
+        el('div', { class: 'stop-edit-fields' }, [
+          el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
+          el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
+        ]),
       ]),
-    ])
-  ));
+    ]);
+    editor.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.stopPropagation(); closeStopEditor(); }
+    });
+    return editor;
+  }
+
+  const text = el('span', { class: 'day-text' }, [
+    el('span', { class: 'day-title', text: stop.name }),
+    el('span', { class: 'muted small', text: stopMeta(stop, group.days.length) }),
+  ]);
+  if (!canEdit()) return el('div', { class: 'stop-row' }, [number, text]);
+
+  const open = el('button', { type: 'button', class: 'stop-open', 'data-stop-open': String(stop.id), 'aria-label': `Edit stop ${stop.name}`, 'aria-expanded': 'false' }, [
+    text,
+    (() => { const icon = svg(PENCIL); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '16'); icon.setAttribute('height', '16'); icon.setAttribute('fill', 'none'); icon.setAttribute('stroke', 'currentColor'); icon.setAttribute('stroke-width', '2'); icon.setAttribute('stroke-linecap', 'round'); icon.setAttribute('stroke-linejoin', 'round'); icon.setAttribute('aria-hidden', 'true'); icon.classList.add('pencil'); return icon; })(),
+  ]);
+  open.addEventListener('click', () => {
+    state.editingStop = stop.id;
+    render();
+    const done = document.querySelector('.stop-edit .stepper button:not(:disabled)');
+    if (done) done.focus();
+  });
+  return el('div', { class: 'stop-row' }, [number, open]);
+}
+
+function renderRoute() {
+  const rows = state.groups.filter((group) => group.stop.id !== null).map(stopRow);
   nodes.routeList.replaceChildren(...(rows.length ? rows : [el('p', { class: 'muted empty-note', text: 'This trip has no stops yet.' })]));
 }
 
@@ -153,10 +321,25 @@ function renderHeader() {
   const { trip } = state;
   const status = resolveStatus(trip);
   document.title = `${trip.name} | Plainer`;
-  nodes.name.textContent = trip.name;
+  if (canEdit()) {
+    nodes.name.replaceChildren(editable({ value: trip.name, label: 'trip name', onCommit: (name) => { if (name) editTrip('name', name); } }));
+  } else {
+    nodes.name.textContent = trip.name;
+  }
   nodes.status.className = `badge b-${status}`;
   nodes.status.textContent = STATUS_LABEL[status];
-  nodes.dates.textContent = tripDatesLabel(trip.startDate, state.days.length);
+  const datesText = tripDatesLabel(trip.startDate, state.days.length);
+  if (canEdit()) {
+    nodes.dates.replaceChildren(editable({
+      value: dateInputValue(trip.startDate), display: datesText, label: 'start date', type: 'date', placeholder: 'Set start date',
+      onCommit: (value) => { const date = parseDateInput(value); if (date) editTrip('startDate', date); },
+    }));
+  } else {
+    nodes.dates.textContent = datesText;
+  }
+  nodes.readonlyNote.hidden = canEdit();
+  nodes.readonlyNote.textContent = `Shared by ${trip.sharedBy || 'a traveler'} · view only`;
+  renderMenu();
   nodes.owner.textContent = isShared(trip) ? `Shared by ${trip.sharedBy || 'a traveler'}` : 'Owned by you';
 
   nodes.people.replaceChildren();
@@ -232,8 +415,117 @@ async function load(api, id) {
   state.validation = validation;
   state.people = isShared(state.trip) ? [] : sharedPeople(shares);
   const first = state.groups.flatMap((group) => group.days)[0];
-  if (first) state.expanded.add(first.id);
+  if (first && !state.expandedInit) { state.expanded.add(first.id); state.expandedInit = true; }
 }
+
+// ---- trip actions (⋯ menu) ----
+
+function setMenuOpen(open) {
+  nodes.menu.hidden = !open;
+  nodes.menuButton.setAttribute('aria-expanded', String(open));
+}
+
+function flashError(text) {
+  nodes.saveStatus.hidden = false;
+  nodes.saveStatus.dataset.status = 'error';
+  nodes.saveText.textContent = text;
+  nodes.saveRetry.hidden = true;
+  nodes.live.textContent = text;
+}
+
+function confirmAction({ title, text, okLabel, run }) {
+  const ok = document.getElementById('confirm-ok');
+  const error = document.getElementById('confirm-error');
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-text').textContent = text;
+  ok.textContent = okLabel;
+  ok.disabled = false;
+  error.hidden = true;
+  ok.onclick = async () => {
+    ok.disabled = true;
+    try {
+      await run();
+    } catch (failure) {
+      error.textContent = 'That didn’t work. Please try again.';
+      error.hidden = false;
+      ok.disabled = false;
+    }
+  };
+  nodes.confirm.showModal();
+}
+
+document.getElementById('confirm-cancel').addEventListener('click', () => nodes.confirm.close());
+
+async function duplicateTrip() {
+  try {
+    const copy = await state.api.post(`trips/${state.id}/clone`);
+    location.assign('/trip/?id=' + encodeURIComponent(copy.id));
+  } catch (error) {
+    flashError('Couldn’t duplicate this trip');
+  }
+}
+
+function deleteTrip() {
+  confirmAction({
+    title: 'Delete this trip?',
+    text: `“${state.trip.name}” and everything in it will be deleted. This can’t be undone.`,
+    okLabel: 'Delete trip',
+    run: async () => {
+      await state.api.delete(`trips/${state.id}`);
+      location.replace('/trips/');
+    },
+  });
+}
+
+function leaveTrip() {
+  confirmAction({
+    title: 'Leave this trip?',
+    text: `“${state.trip.name}” will disappear from your list. Ask ${state.trip.sharedBy || 'the owner'} to share it again if you change your mind.`,
+    okLabel: 'Leave trip',
+    run: async () => {
+      await state.api.delete(`trip-shares/unsubscribe/${state.id}`);
+      location.replace('/trips/');
+    },
+  });
+}
+
+function renderMenu() {
+  const item = (text, handler, className = '') => {
+    const button = el('button', { type: 'button', role: 'menuitem', class: className, text });
+    button.addEventListener('click', () => { setMenuOpen(false); handler(); });
+    return button;
+  };
+  nodes.menu.replaceChildren(...(canEdit()
+    ? [item('Duplicate trip', duplicateTrip), item('Delete trip…', deleteTrip, 'danger')]
+    : [item('Leave trip…', leaveTrip, 'danger')]));
+}
+
+nodes.menuButton.addEventListener('click', () => {
+  const open = nodes.menu.hidden;
+  setMenuOpen(open);
+  if (open) nodes.menu.querySelector('button').focus();
+});
+document.addEventListener('click', (event) => {
+  if (!nodes.menu.hidden && !nodes.menuWrap.contains(event.target)) setMenuOpen(false);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || nodes.menu.hidden) return;
+  setMenuOpen(false);
+  nodes.menuButton.focus();
+});
+
+// ---- keep in step with edits made elsewhere (another tab, the phone app) ----
+
+async function refreshWhenIdle() {
+  const editing = document.activeElement && document.activeElement.classList.contains('inline-input');
+  if (document.hidden || queue.isBusy() || queue.status() === 'error' || editing || !state.trip || nodes.confirm.open) return;
+  try {
+    await load(state.api, state.id);
+    if (!queue.isBusy()) render();
+  } catch (error) { /* keep what is on screen; the next return to the tab tries again */ }
+}
+document.addEventListener('visibilitychange', refreshWhenIdle);
+window.addEventListener('focus', refreshWhenIdle);
 
 function wirePaneTabs() {
   nodes.paneTabs.forEach((tab) => tab.addEventListener('click', () => {
@@ -250,8 +542,10 @@ async function start() {
 
   nodes.skeleton.hidden = false;
   nodes.message.hidden = true;
+  state.api = createApi(user);
+  state.id = id;
   try {
-    await load(createApi(user), id);
+    await load(state.api, id);
   } catch (error) {
     if (error.status === 401) {
       await signOut();

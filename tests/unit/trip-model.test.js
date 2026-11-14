@@ -15,14 +15,14 @@ test('plainLines turns rich text into safe plain lines', () => {
 });
 
 test('stopFromDto and dayFromDto fall back gracefully', () => {
-  assert.deepEqual(stopFromDto({ id: 1, order: 2, location: { name: 'Oslo' }, transport: 'Train', plannedDays: 3 }), { id: 1, order: 2, name: 'Oslo', nights: 3, transport: 'Train' });
-  assert.deepEqual(stopFromDto({ id: 2 }), { id: 2, order: 0, name: 'Unnamed stop', nights: 1, transport: null });
+  assert.deepEqual(stopFromDto({ id: 1, order: 2, location: { name: 'Oslo' }, transport: 'Train', plannedDays: 3 }), { id: 1, order: 2, name: 'Oslo', plannedDays: 3, transport: 'Train' });
+  assert.deepEqual(stopFromDto({ id: 2 }), { id: 2, order: 0, name: 'Unnamed stop', plannedDays: 1, transport: null });
   assert.deepEqual(dayFromDto({ id: 5, routeStopId: 1, order: 0, title: ' Hi ', description: '<p>x</p>' }), { id: 5, order: 0, stopId: 1, title: 'Hi', plan: ['x'] });
 });
 
 test('stopMeta reads like the app', () => {
-  assert.equal(stopMeta({ nights: 1, transport: 'Train' }, 0), '1 night · Train · no days planned');
-  assert.equal(stopMeta({ nights: 7, transport: null }, 3), '7 nights · 3 days planned');
+  assert.equal(stopMeta({ plannedDays: 1, transport: 'Train' }, 7), 'Planned: 1 · Actual: 7 · Train');
+  assert.equal(stopMeta({ plannedDays: 7, transport: null }, 3), 'Planned: 7 · Actual: 3');
 });
 
 test('buildItinerary orders stops and days and numbers days across the trip', () => {

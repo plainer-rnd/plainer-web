@@ -7,7 +7,7 @@ export function stopFromDto(dto) {
     id: dto.id,
     order: dto.order ?? 0,
     name: (dto.location && dto.location.name) || 'Unnamed stop',
-    nights: dto.plannedDays ?? 1,
+    plannedDays: dto.plannedDays ?? 1,
     transport: dto.transport || null,
   };
 }
@@ -47,9 +47,9 @@ export function plural(count, one, many = one + 's') {
 }
 
 export function stopMeta(stop, dayCount) {
-  const parts = [plural(stop.nights, 'night')];
+  // Same wording as the iOS route list: the target number of days vs the days actually added.
+  const parts = [`Planned: ${stop.plannedDays} · Actual: ${dayCount}`];
   if (stop.transport) parts.push(stop.transport);
-  parts.push(dayCount === 0 ? 'no days planned' : plural(dayCount, 'day') + ' planned');
   return parts.join(' · ');
 }
 
@@ -130,3 +130,41 @@ export function parseTripId(search) {
   const raw = new URLSearchParams(search).get('id');
   return raw && /^\d+$/.test(raw) ? raw : null;
 }
+
+// ---- editing helpers ----
+
+export function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// The plan is edited as plain text, one paragraph per line, and saved back as simple <p> paragraphs.
+export function textToLines(text) {
+  return String(text).split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+export function linesToHtml(lines) {
+  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+}
+
+export function sameLines(a, b) {
+  return a.length === b.length && a.every((line, index) => line === b[index]);
+}
+
+// <input type="date"> uses "2026-11-08"; the API wants a UTC timestamp for the same calendar day.
+export function dateInputValue(date) {
+  if (!date) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function parseDateInput(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  if (!match || Number(match[1]) < 1900) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+export function dateToApi(date) {
+  return `${dateInputValue(date)}T00:00:00Z`;
+}
+
+export const TRANSPORT_TYPES = ['Flight', 'Car', 'Train', 'Bus', 'Ferry', 'Cruise', 'Bicycle', 'Hiking'];
