@@ -185,3 +185,17 @@ test.describe('phone', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   });
 });
+
+test('stop controls appear on hover and keyboard focus on desktop', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  const row = page.locator('#route-list .stop-row').first();
+  const controls = row.locator('.stop-controls');
+  await expect(controls).toHaveCSS('opacity', '0');
+  await row.hover();
+  await expect(controls).toHaveCSS('opacity', '1');
+  await page.mouse.move(0, 0);
+  await expect(controls).toHaveCSS('opacity', '0');
+  await page.getByRole('button', { name: 'More planned days for Oslo' }).focus();
+  await expect(controls).toHaveCSS('opacity', '1');
+});
