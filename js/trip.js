@@ -15,6 +15,8 @@ import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
 import { openGenerateDaysDialog } from './ai-days-dialog.js';
+import { openReviewDialog } from './validation-review.js';
+import { readDismissed, reviewCounts, writeDismissed } from './validation-model.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -25,6 +27,7 @@ const state = {
   days: [],
   groups: [],
   validation: null,
+  dismissed: new Set(),
   people: [],
   sharedBy: null,
   expanded: new Set(),
@@ -150,7 +153,7 @@ function statBlock(value, label, className) {
 }
 
 function renderOverview() {
-  const overview = overviewOf(state.stops, state.days, state.validation);
+  const overview = overviewOf(state.stops, state.days, state.validation && { ...state.validation, ...reviewCounts(state.validation, state.dismissed) });
   const stats = el('div', { class: 'panel stats' }, [
     statBlock(String(overview.stopCount), 'Stops'),
     statBlock(String(overview.dayCount), 'Days'),
@@ -168,9 +171,12 @@ function renderOverview() {
 
   const cards = [stats, progress];
   if (overview.issues > 0) {
+    const review = canEdit() ? el('button', { type: 'button', class: 'btn btn-outline btn-sm', id: 'review-btn', text: 'Review' }) : null;
+    if (review) review.addEventListener('click', reviewTrip);
     cards.push(el('div', { class: 'panel card-pad attention' }, [
       el('b', { class: 'card-title', text: `Fix ${plural(overview.issues, 'validation issue')}` }),
-      el('span', { class: 't2', text: 'Open this trip in the Plainer app to review the suggestions.' }),
+      el('span', { class: 't2', text: canEdit() ? 'Review the problems we found and apply suggested fixes.' : 'The owner can review the suggestions.' }),
+      review,
     ]));
   }
   nodes.overview.replaceChildren(...cards);
@@ -514,6 +520,28 @@ function failed(error, retry) {
   showMessage('We couldn’t load this trip', text, button, 'alert');
 }
 
+function localStorageOrNull() {
+  try { return window.localStorage; } catch (error) { return { getItem: () => null, setItem() {}, removeItem() {} }; }
+}
+
+function reviewTrip() {
+  openReviewDialog({
+    api: state.api,
+    tripId: state.id,
+    getValidation: () => state.validation,
+    getDismissed: () => state.dismissed,
+    setDismissed: (next) => { state.dismissed = next; writeDismissed(localStorageOrNull(), state.id, next); renderOverview(); },
+    insertIndexFor: (stopId) => insertIndexForStop(state.groups, stopId),
+    // A fix changed stops or days on the server: read everything back so the whole page matches.
+    onFixed: async () => {
+      await reloadLists();
+      state.validation = await optional(state.api.get(`trips/${state.id}/validate`), state.validation);
+      render();
+      return state.validation;
+    },
+  });
+}
+
 // Optional extras never block the page: a failure just leaves that part out.
 const optional = (promise, fallback) => promise.catch(() => fallback);
 
@@ -533,6 +561,7 @@ async function load(api, id) {
   state.days = (days || []).map(dayFromDto);
   state.groups = buildItinerary(state.stops, state.days);
   state.validation = validation;
+  state.dismissed = readDismissed(localStorageOrNull(), id);
   state.people = isShared(state.trip) ? [] : sharedPeople(shares);
   const first = state.groups.flatMap((group) => group.days)[0];
   if (first && !state.expandedInit) { state.expanded.add(first.id); state.expandedInit = true; }

@@ -22,6 +22,7 @@ test.describe('Plan with AI (trips list)', () => {
   test('describing a trip creates it and opens it', async ({ page }) => {
     const requests = [];
     await mockApi(page, { requests });
+    await page.route('**/api/trips/express', async (route) => { await new Promise((r) => setTimeout(r, 400)); await route.fallback(); });
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('  7 days in Portugal, foodie ');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();

@@ -26,7 +26,11 @@ const sampleDetails = {
       { id: 101, tripId: 1, routeStopId: 11, order: 0, title: 'Historic Core', description: '<p>Akershus Fortress.</p>' },
       { id: 103, tripId: 1, routeStopId: 12, order: 2, title: '', description: '' },
     ],
-    validation: { tripId: 1, isValid: false, errorCount: 1, warningCount: 2, issues: [] },
+    validation: { tripId: 1, isValid: false, errorCount: 1, warningCount: 2, issues: [
+      { hash: 'h-flam', severity: 'Error', code: 'ROUTE_STOP_NO_DAYS', name: 'Stop without days', message: 'Flåm has no days planned.', suggestion: 'Add days to Flåm.', scope: 'RouteStop', entityId: 13 },
+      { hash: 'h-oslo', severity: 'Warning', code: 'TOO_MANY_DAYS_AT_STOP', name: 'Long stay', message: 'Oslo has more days than usual.', suggestion: null, scope: 'RouteStop', entityId: 11 },
+      { hash: 'h-bergen', severity: 'Warning', code: 'LOCATION_NOT_FOUND', name: 'Place not found', message: 'We couldn’t find Bergen on the map.', suggestion: null, scope: 'RouteStop', entityId: 12 },
+    ] },
   },
   2: {
     trip: sampleTrips[1],
@@ -57,6 +61,7 @@ async function mockApi(page, options = {}) {
   const details = options.details || JSON.parse(JSON.stringify(sampleDetails));
   let nextId = 900;
   const sharedBy = options.sharedBy || [{ tripId: 2, shares: [{ sharedWith: 'a@x.co', shareId: 1 }, { sharedWith: 'b@x.co', shareId: 2 }] }];
+  const fixed = (options.fixed = options.fixed || new Set());
   const parseBody = (request) => {
     const data = request.postData();
     if (!data) return null;
@@ -83,10 +88,27 @@ async function mockApi(page, options = {}) {
       const made = { rejectionReason: null, tripId: 99, tripName: 'Portugal food trip', routeStopCount: 3, dayCount: 7, routeStops: [{ id: 1, name: 'Lisbon', dayIds: [1], daysMissing: false }], unresolvedStopNames: [] };
       return json(made.rejectionReason || options.expressResult?.tripId === null ? 200 : 201, { requestId: 'r', result: { ...made, ...(options.expressResult || {}) } });
     }
+    if (/\/suggest$/.test(url.pathname) && request.method() === 'POST') {
+      if (options.suggestStatus) return json(options.suggestStatus, { error: { message: options.suggestMessage || 'boom' } });
+      const body = JSON.parse(request.postData());
+      const byCode = {
+        ROUTE_STOP_NO_DAYS: [
+          { suggestion: 'Generate 3 days for Flåm', fixInfo: { code: 'GenerateDays', method: 'POST', url: '/api/trips/1/route-stops/13/generate-days', body: { numberOfDays: 3 } } },
+          { suggestion: 'Remove Flåm from the route', fixInfo: { code: 'RemoveRouteStop', method: 'DELETE', url: '/api/trips/1/route-stops/13', body: null } },
+        ],
+        TOO_MANY_DAYS_AT_STOP: [
+          { suggestion: 'Merge the extra days in Oslo', fixInfo: { code: 'MergeDays', method: 'POST', url: '/api/trips/1/route-stops/11/merge-days', body: null } },
+          { suggestion: 'A bad fix pointing elsewhere', fixInfo: { code: 'RemoveDay', method: 'DELETE', url: 'https://evil.example/api/trips/1/days/101', body: null } },
+        ],
+      };
+      return json(200, { requestId: 'r', result: { issueHash: body.issueHash, issueCode: body.issueCode, issueName: 'x', options: options.noSuggestions ? [] : byCode[body.issueCode] || [] } });
+    }
+    if (/\/merge-days$/.test(url.pathname) && request.method() === 'POST') { fixed.add('h-oslo'); return json(200, { requestId: 'r', result: {} }); }
     const generate = url.pathname.match(/^\/api\/trips\/(\d+)\/route-stops\/(\d+)\/generate-days$/);
     if (generate && request.method() === 'POST') {
       if (options.generateStatus) return json(options.generateStatus, { error: { message: options.generateMessage || 'boom' } });
       const { numberOfDays } = JSON.parse(request.postData());
+      if (generate[2] === '13') fixed.add('h-flam');
       return json(200, { requestId: 'r', result: Array.from({ length: numberOfDays }, (_, i) => ({ name: `AI day ${i + 1}`, description: `<p>Plan ${i + 1}</p>`, didYouKnow: null })) });
     }
     const batch = url.pathname.match(/^\/api\/trips\/(\d+)\/days\/batch$/);
@@ -127,6 +149,7 @@ async function mockApi(page, options = {}) {
       const byOrder = () => [...list].sort((a, b) => a.order - b.order);
       const renumber = (items) => items.forEach((item, index) => { item.order = index; });
       if (request.method() === 'DELETE') {
+        if (structure[3] === '13') fixed.add('h-flam');
         const index = list.findIndex((item) => String(item.id) === structure[3]);
         list.splice(index, 1);
         if (structure[2] === 'route-stops') detail.days = detail.days.filter((d) => String(d.routeStopId) !== structure[3]);
@@ -169,9 +192,11 @@ async function mockApi(page, options = {}) {
       if (!part) return json(200, { requestId: 'r', result: detail.trip });
       if (part === '/route-stops') return json(200, { requestId: 'r', result: detail.stops });
       if (part === '/days') return json(200, { requestId: 'r', result: detail.days });
-      if (part === '/validate') return detail.validation
-        ? json(200, { requestId: 'r', result: detail.validation })
-        : json(500, { error: 'validation down' });
+      if (part === '/validate') {
+        if (!detail.validation) return json(500, { error: 'validation down' });
+        const issues = detail.validation.issues.filter((i) => !fixed.has(i.hash));
+        return json(200, { requestId: 'r', result: { ...detail.validation, issues, errorCount: issues.filter((i) => i.severity === 'Error').length, warningCount: issues.filter((i) => i.severity === 'Warning').length } });
+      }
     }
     if (url.pathname === '/api/trip-shares') return json(200, { requestId: 'r', result: options.sharedWithMe || [] });
     const sharesFor = url.pathname.match(/^\/api\/trip-shares\/(\d+)$/);
