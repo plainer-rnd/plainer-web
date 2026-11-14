@@ -35,14 +35,21 @@ test('duplicate a day puts the copy right after it, with the same title and plan
   expect(post.body).toEqual({ routeStopId: 11, order: 1, title: 'Historic Core', description: '<p>Akershus Fortress.</p>' });
 });
 
-test('move a day down inside its stop; the edges are disabled', async ({ page }) => {
-  const requests = [];
-  await mockApi(page, { requests });
+test('days have no move buttons; Duplicate and Delete sit in the header row and show on open days or hover', async ({ page }) => {
+  await mockApi(page);
   await page.goto('/trip/?id=1');
-  await expect(page.getByRole('button', { name: 'Move day 1 up' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Move day 1 down' }).click();
-  await expect(dayTitles(page).first()).toHaveText('Art and Culture');
-  expect(writes(requests)[0]).toMatchObject({ method: 'PUT', path: '/api/trips/1/days/101', body: { order: 1 } });
+  await expect(page.getByRole('button', { name: /^Move day/ })).toHaveCount(0);
+  const row = page.locator('.day-row').first();
+  await expect(row.getByRole('button', { name: 'Duplicate day 1' })).toBeVisible();
+  const actions = row.locator('.day-actions');
+  const opacity = (locator) => locator.evaluate((node) => getComputedStyle(node).opacity);
+  expect(await opacity(actions)).toBe('1'); // day 1 is open
+  await row.getByRole('button', { name: 'Collapse day 1' }).click();
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => document.activeElement.blur()); // keyboard focus on the row also shows the actions
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('0');
+  await page.locator('.day-row').first().hover();
+  await expect.poll(() => opacity(page.locator('.day-row').first().locator('.day-actions'))).toBe('1');
 });
 
 test('delete a day asks first', async ({ page }) => {

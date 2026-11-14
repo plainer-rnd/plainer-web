@@ -6,7 +6,7 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
-  pdfFileName, insertIndexForStop, dayMoveIndex, duplicateDayBody, stopDropIds, dayDropOrder,
+  pdfFileName, insertIndexForStop, duplicateDayBody, stopDropIds, dayDropOrder,
   daysBeforeStop, generatedDaysBody,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
@@ -202,6 +202,7 @@ function dayRow(day) {
       date ? el('span', { class: 'muted small', text: date }) : null,
       !open && preview ? el('span', { class: 'muted small clamp1', text: preview }) : null,
     ]),
+    canEdit() ? dayActions(day, open) : null,
     toggle,
   ]);
 
@@ -218,7 +219,7 @@ function dayRow(day) {
       : day.plan.length
         ? day.plan.map((line) => el('p', { class: 't2', text: line }))
         : [el('p', { class: 'muted', text: 'Nothing planned for this day yet.' })];
-    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan, canEdit() ? dayActions(day) : null]));
+    parts.push(el('div', { class: 'day-plan', id: `day-${day.id}-plan` }, [el('span', { class: 'label', text: 'Plan' }), ...plan]));
   }
   return el('div', {}, parts);
 }
@@ -248,10 +249,10 @@ function actionButton(icon, label, handler, { disabled = false, danger = false }
   return button;
 }
 
-function dayActions(day) {
-  return el('div', { class: 'day-actions', role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
-    actionButton('up', `Move day ${day.number} up`, () => moveDay(day, -1), { disabled: dayMoveIndex(state.groups, day, -1) === null }),
-    actionButton('down', `Move day ${day.number} down`, () => moveDay(day, 1), { disabled: dayMoveIndex(state.groups, day, 1) === null }),
+// Duplicate and Delete sit in the day's header row, next to Expand/Collapse: always visible on an open day,
+// otherwise only on mouse over or keyboard focus (days are reordered by dragging).
+function dayActions(day, open) {
+  return el('div', { class: `day-actions${open ? ' is-open' : ''}`, role: 'group', 'aria-label': `Actions for day ${day.number}` }, [
     actionButton('copy', `Duplicate day ${day.number}`, () => duplicateDay(day)),
     actionButton('trash', `Delete day ${day.number}`, () => deleteDay(day), { danger: true }),
   ]);
@@ -587,12 +588,6 @@ function duplicateDay(day) {
       state.expanded.add(copy.id);
     },
   });
-}
-
-function moveDay(day, direction) {
-  const order = dayMoveIndex(state.groups, day, direction);
-  if (order === null) return;
-  structure({ send: () => state.api.put(`trips/${state.id}/days/${day.id}`, { order }) });
 }
 
 function deleteDay(day) {
