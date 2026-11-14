@@ -77,6 +77,15 @@ Four stages, each ends in one PR, branched from `main` after the previous PR mer
 
 **Done when:** every trip in Dev renders correctly and matches the mockups at all widths, both themes.
 
+### Stage 3 discovery (findings, used by stage 4)
+
+- **No Activity/Fact entries in the backend.** A day is `{id, routeStopId, order, title, description}`, where `description` is **rich-text HTML** written by the app (`<p>`, `<ul><li>`, bold, …). The separate `notes` endpoint exists but the app does not use it. Stage 3 shows the description as plain lines (tags stripped, list items bulleted). **Stage 4 must decide how to edit it** (plain textarea is lossy for formatted days) and the entry-type badge has no backing field.
+- **Stops:** `RouteStopApiResponse {id, order, distance, location{id,name,type,address,latitude,longitude}, transport, plannedDays}`. The displayed name is `location.name`; changing it means picking another location (`GET trips/{id}/locations?description=` autocomplete + `LocationId`), not free text. **"Nights" is `plannedDays`.** "N days planned" is the real count of days under the stop.
+- **Transport** is a string enum: Flight, Car, Train, Bus, Ferry, Cruise, Bicycle, Hiking.
+- **Validation:** `GET trips/{id}/validate` → `{errorCount, warningCount, issues[]}`; the app shows errors + warnings as one number.
+- **Shared-with:** `GET trip-shares/{tripId}` (owner only; failure is ignored) and `GET trip-shares` (trips shared with me) to detect "Shared by".
+- **Day order** is not assumed to be global: days are sorted by stop order, then day order, and numbered across the trip.
+
 ## Stage 4: Editing (autosave) and trip-level actions
 
 **Branch:** `feature/personal-area-trip-edit` (if it grows too large, split into 4a "text, types, trip actions" and 4b "structure and drag-and-drop"; recommend deciding after the stage 3 merge).

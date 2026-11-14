@@ -297,3 +297,52 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
   .pl .tsub{display:block}
   .pl .profile-card{padding:24px 20px}
 }
+
+/* Trip details (view only) */
+.pl .trip-page{display:flex;flex-direction:column;gap:22px}
+.pl .back-link{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:36px;font-size:15px;font-weight:600;text-decoration:none;color:var(--ink)}
+.pl .trip-head{display:flex;flex-direction:column;gap:10px}
+.pl .trip-title{margin:0;font-size:46px;font-weight:800;line-height:1.05;overflow-wrap:anywhere}
+.pl .trip-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:15px}
+.pl .people{display:inline-flex;align-items:center;gap:6px}
+.pl .people:empty{display:none}
+.pl .avatar.xs[style]{color:#fff}
+#trip-app{display:flex;flex-direction:column;gap:24px}
+.pl .overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:16px}
+.pl .stats{padding:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pl .stat .warn{color:var(--draft)}
+.pl .card-pad{padding:20px;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.pl .card-title{font-size:17px}
+.pl .attention{background:var(--draft-bg);border-color:transparent}
+.pl .trip-cols{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.pl .days-col{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.pl .route-col{flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.pl .col-head{display:flex;align-items:center;gap:10px}
+.pl .col-head h2{margin:0;font-size:28px;font-weight:700}
+.pl .col-head .muted{font-size:14px}
+.pl .itinerary{overflow:hidden}
+.pl .group+.group{border-top:1px solid var(--line)}
+.pl .ghead{display:flex;align-items:center;padding:12px 16px 8px;min-height:48px}
+.pl .ghead b{color:var(--lav-t);font-size:14px}
+.pl .hrow.day-row,.pl .hrow.stop-row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px}
+.pl .stop-row+.stop-row{border-top:1px solid var(--line)}
+.pl .day-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pl .day-title{font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.pl .small{font-size:13px}
+.pl .day-plan{margin:0 16px 14px 62px;padding:4px 0 6px;display:flex;flex-direction:column;gap:6px}
+.pl .day-plan p{margin:0;font-size:15px;line-height:1.55;overflow-wrap:anywhere}
+.pl .empty-note{margin:0;padding:6px 16px 16px;font-size:14px}
+.pl .pane-tabs{display:none}
+.pl .skel-title{min-height:48px;width:60%;border-radius:12px}
+.pl .skel-panel{min-height:110px;border-radius:20px;margin-top:16px}
+.pl .skel-panel.tall{min-height:320px}
+@media (max-width:720px){
+  .pl .trip-title{font-size:30px}
+  .pl .pane-tabs{display:flex;width:100%}
+  .pl .pane-tabs button{flex:1;justify-content:center}
+  .pl .pane{display:none}
+  .pl .pane.active{display:flex}
+  .pl .overview.active{display:grid}
+  .pl .trip-cols{display:block}
+  .pl .day-plan{margin-left:16px}
+}
