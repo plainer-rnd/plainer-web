@@ -524,4 +524,7 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .map-pin-wrap.is-dim{opacity:.5}
 .pl .map-pin-wrap.is-active .map-pin{transform:scale(1.4);background:var(--draft,#C2603F);box-shadow:0 0 0 4px rgba(194,96,63,.3),0 2px 6px rgba(0,0,0,.4)}
 @media (prefers-reduced-motion:reduce){.pl .map-pin,.pl .map-pin-wrap{transition:none}}
-.pl .stop-row[data-stop-id]:hover:not(.stop-edit){background:var(--field)}
+.pl .stop-row.is-pointed:not(.stop-edit){background:var(--field)}
+.pl .group.is-pointed>.ghead{background:var(--lav-tint)}
+.pl .group>.ghead{border-radius:12px;transition:background .12s}
+.pl .tcounts{display:block;font-size:13px;color:var(--t3)}

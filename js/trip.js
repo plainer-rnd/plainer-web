@@ -75,19 +75,35 @@ const nodes = {
 
 const tripMap = createTripMap({ section: nodes.mapPane, canvas: document.getElementById('trip-map') });
 
-// Hovering (or keyboard-focusing) a stop in the Route list highlights its pin on the map.
+// A stop can be pointed at from three places, and all three light up together: its row in the Route list, its
+// group in the Days list, and its pin on the map. Mouse hover and keyboard focus both count.
+let pointedStop = null;
+
+function pointAtStop(id) {
+  pointedStop = id;
+  tripMap.highlight(id);
+  document.querySelectorAll('[data-stop-id]').forEach((node) => {
+    node.classList.toggle('is-pointed', id !== null && node.dataset.stopId === String(id));
+  });
+}
+
 (() => {
-  const stopIdOf = (event) => {
-    const row = event.target.closest && event.target.closest('[data-stop-id]');
-    return row && nodes.routeList.contains(row) ? Number(row.dataset.stopId) : null;
-  };
   const canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
-  if (canHover) {
-    nodes.routeList.addEventListener('mouseover', (event) => tripMap.highlight(stopIdOf(event)));
-    nodes.routeList.addEventListener('mouseleave', () => tripMap.highlight(null));
-  }
-  nodes.routeList.addEventListener('focusin', (event) => tripMap.highlight(stopIdOf(event)));
-  nodes.routeList.addEventListener('focusout', () => tripMap.highlight(null));
+  const watch = (list) => {
+    const stopIdOf = (event) => {
+      const holder = event.target.closest && event.target.closest('[data-stop-id]');
+      return holder && list.contains(holder) ? Number(holder.dataset.stopId) : null;
+    };
+    if (canHover) {
+      list.addEventListener('mouseover', (event) => pointAtStop(stopIdOf(event)));
+      list.addEventListener('mouseleave', () => pointAtStop(null));
+    }
+    list.addEventListener('focusin', (event) => pointAtStop(stopIdOf(event)));
+    list.addEventListener('focusout', () => pointAtStop(null));
+  };
+  watch(nodes.routeList);
+  watch(nodes.daysList);
+  tripMap.onPoint(pointAtStop);
 })();
 
 // ---- autosave ----
@@ -288,7 +304,7 @@ function renderDays() {
     const body = group.days.length
       ? group.days.map(dayRow)
       : [el('p', { class: 'muted empty-note', text: 'No days planned yet.' })];
-    return el('div', { class: 'group' }, [
+    return el('div', { class: 'group', ...(group.stop.id !== null ? { 'data-stop-id': String(group.stop.id) } : {}) }, [
       el('div', { class: 'ghead' }, [
         el('b', { text: `${group.stop.name} · ${plural(group.days.length, 'day')}` }),
         canEdit() && group.stop.id !== null
@@ -515,6 +531,7 @@ function render() {
   renderRoute();
   renderPanes();
   tripMap.update(mapPins(state.groups));
+  pointAtStop(pointedStop); // the lists were rebuilt: keep whatever was being pointed at lit
   nodes.daysSub.textContent = `· ${plural(state.days.filter(hasPlan).length, 'day')} with a plan`;
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();
@@ -824,8 +841,9 @@ nodes.exportBtn.addEventListener('click', async () => {
   nodes.exportBtn.disabled = true;
   label.textContent = 'Preparing…';
   try {
-    const blob = await state.api.download(`trips/${state.id}/export/pdf`);
-    const link = el('a', { href: URL.createObjectURL(blob), download: pdfFileName(state.trip.name) });
+    const { blob, fileName } = await state.api.download(`trips/${state.id}/export/pdf`);
+    // The server names the file (trip name and dates); if the header isn't readable, build a name here.
+    const link = el('a', { href: URL.createObjectURL(blob), download: fileName || pdfFileName(state.trip.name) });
     document.body.append(link);
     link.click();
     link.remove();

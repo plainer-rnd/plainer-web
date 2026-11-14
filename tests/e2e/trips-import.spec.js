@@ -20,9 +20,14 @@ async function openDialog(page) {
 test('importing a PDF uploads it as multipart and opens the new trip', async ({ page }) => {
   const requests = [];
   await mockApi(page, { requests });
+  await page.route('**/api/trips/import', async (route) => { await new Promise((r) => setTimeout(r, 400)); await route.fallback(); });
   const dialog = await openDialog(page);
   await dialog.getByLabel('PDF file (up to 3 MB)').setInputFiles(pdf());
   await dialog.getByRole('button', { name: 'Import' }).click();
+  // the form gives way to a spinner dialog
+  await expect(page.getByRole('alertdialog', { name: 'Importing your PDF…' })).toBeVisible();
+  await expect(page.locator('.progress-dialog .spinner')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Import a trip from PDF' })).toHaveCount(0);
   await expect(page).toHaveURL(/\/trip\/\?id=88$/);
   const upload = writes(requests).find((r) => r.path === '/api/trips/import');
   expect(upload.body).toEqual({ multipart: true, hasPdf: true });
@@ -49,9 +54,13 @@ test('a PDF the server declines shows its reason and creates nothing', async ({ 
   const dialog = await openDialog(page);
   await dialog.getByLabel('PDF file (up to 3 MB)').setInputFiles(pdf());
   await dialog.getByRole('button', { name: 'Import' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText('This looks like an invoice, not a trip plan.');
+  const again = page.getByRole('dialog', { name: 'Import a trip from PDF' });
+  await expect(again.getByRole('alert')).toHaveText('This looks like an invoice, not a trip plan.');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page).toHaveURL(/\/trips\/$/);
-  await expect(dialog.getByRole('button', { name: 'Import' })).toBeEnabled();
+  // the chosen file is still there, so retrying needs no new pick
+  await expect(again.getByLabel('PDF file (up to 3 MB)')).toHaveJSProperty('files.length', 1);
+  await expect(again.getByRole('button', { name: 'Import' })).toBeEnabled();
 });
 
 test('unresolved places are listed before opening the trip', async ({ page }) => {
@@ -59,10 +68,11 @@ test('unresolved places are listed before opening the trip', async ({ page }) =>
   const dialog = await openDialog(page);
   await dialog.getByLabel('PDF file (up to 3 MB)').setInputFiles(pdf());
   await dialog.getByRole('button', { name: 'Import' }).click();
-  await expect(dialog).toContainText('“Imported Rome” was added with 2 stops and 4 days.');
-  await expect(dialog).toContainText('Atlantis');
-  await expect(dialog).toContainText('Some days are missing for: Rome');
-  await expect(dialog.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trip/?id=88');
+  const ready = page.getByRole('dialog', { name: 'Your trip is ready' });
+  await expect(ready).toContainText('“Imported Rome” was added with 2 stops and 4 days.');
+  await expect(ready).toContainText('Atlantis');
+  await expect(ready).toContainText('Some days are missing for: Rome');
+  await expect(ready.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trip/?id=88');
 });
 
 test('a server error shows a message and the dialog can retry', async ({ page }) => {
@@ -70,8 +80,9 @@ test('a server error shows a message and the dialog can retry', async ({ page })
   const dialog = await openDialog(page);
   await dialog.getByLabel('PDF file (up to 3 MB)').setInputFiles(pdf());
   await dialog.getByRole('button', { name: 'Import' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('Couldn’t import the PDF');
-  await expect(dialog.getByRole('button', { name: 'Import' })).toBeEnabled();
+  const again = page.getByRole('dialog', { name: 'Import a trip from PDF' });
+  await expect(again.getByRole('alert')).toContainText('Couldn’t import the PDF');
+  await expect(again.getByRole('button', { name: 'Import' })).toBeEnabled();
 });
 
 test('a 400 shows the server’s message', async ({ page }) => {
@@ -79,7 +90,7 @@ test('a 400 shows the server’s message', async ({ page }) => {
   const dialog = await openDialog(page);
   await dialog.getByLabel('PDF file (up to 3 MB)').setInputFiles(pdf());
   await dialog.getByRole('button', { name: 'Import' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText('The file is not a PDF.');
+  await expect(page.getByRole('dialog', { name: 'Import a trip from PDF' }).getByRole('alert')).toHaveText('The file is not a PDF.');
 });
 
 test.describe('phone', () => {

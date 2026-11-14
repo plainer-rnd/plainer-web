@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseStartDate, tripFromDto, resolveStatus, coverFor, initialOf, datesLabel, ownerLabel,
+  parseStartDate, tripFromDto, countsLabel, resolveStatus, coverFor, initialOf, datesLabel, ownerLabel,
   splitTrips, filterTrips, tripsCountLabel,
 } from '../../js/trips-model.js';
 
@@ -22,6 +22,16 @@ test('tripFromDto defaults to draft like the app and tolerates missing fields', 
   assert.equal(model.isDraft, true);
   assert.equal(model.name, 'Untitled trip');
   assert.equal(model.shareId, null);
+  assert.deepEqual([model.stopCount, model.dayCount], [null, null]);
+});
+
+test('countsLabel says what is known and nothing when the server did not send counts', () => {
+  assert.equal(countsLabel(tripFromDto({ id: 1 })), null);
+  assert.equal(countsLabel(tripFromDto({ id: 1, stopCount: 0, dayCount: 0 })), 'No stops yet');
+  assert.equal(countsLabel(tripFromDto({ id: 1, stopCount: 1, dayCount: 1 })), '1 stop · 1 day');
+  assert.equal(countsLabel(tripFromDto({ id: 1, stopCount: 3, dayCount: 7 })), '3 stops · 7 days');
+  assert.equal(countsLabel(tripFromDto({ id: 1, stopCount: 2, dayCount: 0 })), '2 stops · 0 days');
+  assert.equal(tripFromDto({ id: 1, stopCount: '3', dayCount: 7 }).stopCount, null);
 });
 
 test('resolveStatus matches the iOS rules', () => {

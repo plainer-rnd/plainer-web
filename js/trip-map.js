@@ -39,6 +39,8 @@ export function createTripMap({ section, canvas }) {
   let lastShape = '';
   let version = 0;
   let activeId = null;
+  let onPoint = () => {};
+  const canHover = Boolean(window.matchMedia && window.matchMedia('(hover: hover)').matches);
   const markers = new Map();
 
   // The stop being pointed at in the list stands out; the other pins fade back.
@@ -90,6 +92,17 @@ export function createTripMap({ section, canvas }) {
         if (!node.firstChild) node.append(el('span', { class: 'map-pin', text: String(pin.number) }));
         applyHighlight();
       });
+      // Pointing at a pin (mouse or keyboard focus) tells the page, which highlights that stop in its lists.
+      if (canHover) {
+        marker.on('mouseover', () => onPoint(pin.id));
+        marker.on('mouseout', () => onPoint(null));
+      }
+      marker.on('add', () => {
+        const node = marker.getElement();
+        if (!node) return;
+        node.addEventListener('focus', () => onPoint(pin.id));
+        node.addEventListener('blur', () => onPoint(null));
+      });
       markers.set(pin.id, marker);
       // Names are user data: the popup is built from DOM nodes, never from an HTML string.
       marker.bindPopup(el('div', { class: 'map-popup' }, [el('b', { text: `${pin.number}. ${pin.name}` }), el('span', { class: 'muted small', text: pin.meta })]));
@@ -105,5 +118,5 @@ export function createTripMap({ section, canvas }) {
     map.invalidateSize();
   }
 
-  return { update, highlight };
+  return { update, highlight, onPoint: (handler) => { onPoint = handler; } };
 }
