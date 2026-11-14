@@ -82,10 +82,9 @@ test.describe('Plan with AI (trips list)', () => {
   });
 });
 
-test.describe('Generate days with AI (stop editor)', () => {
+test.describe('Generate days with AI (days list)', () => {
   async function openGenerate(page, stopName) {
     await page.goto('/trip/?id=1');
-    await page.getByRole('button', { name: `Edit stop ${stopName}` }).click();
     await page.getByRole('button', { name: `Generate days with AI for ${stopName}` }).click();
     return page.getByRole('dialog', { name: `Generate days for ${stopName}` });
   }

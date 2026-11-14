@@ -85,15 +85,16 @@ test('cancelling the place search adds nothing', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add stop' })).toBeFocused();
 });
 
-test('move a stop up and down; the edges are disabled', async ({ page }) => {
-  const requests = [];
-  await mockApi(page, { requests });
+test('the stop editor has no move buttons; Remove sits on the same line as the controls', async ({ page }) => {
+  await mockApi(page);
   await page.goto('/trip/?id=1');
   await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
-  await page.getByRole('button', { name: 'Move Bergen up' }).click();
-  await expect(headings(page)).toHaveText(['Bergen · 1 day', 'Oslo · 2 days', 'Flåm · 0 days']);
-  expect(writes(requests)[0]).toMatchObject({ path: '/api/trips/1/route-stops/reorder', body: { orderedStopIds: [12, 11, 13] } });
-  await expect(page.getByRole('button', { name: 'Move Bergen up' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /^Move Bergen/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Generate days with AI for Bergen/ })).toHaveCount(1);
+  const row = (await page.locator('.stop-edit .stepper').boundingBox()).y;
+  const remove = await page.getByRole('button', { name: 'Remove Bergen' }).boundingBox();
+  expect(Math.abs(remove.y + remove.height / 2 - (row + 18))).toBeLessThan(30);
+  await expect(page.locator('.stop-edit .ghead, .stop-edit [aria-label="Generate days with AI for Bergen"]')).toHaveCount(0);
 });
 
 test('remove a stop confirms with its day count', async ({ page }) => {

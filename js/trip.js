@@ -6,7 +6,7 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
-  pdfFileName, insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
+  pdfFileName, insertIndexForStop, dayMoveIndex, duplicateDayBody, stopDropIds, dayDropOrder,
   daysBeforeStop, generatedDaysBody,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
@@ -265,7 +265,12 @@ function renderDays() {
     return el('div', { class: 'group' }, [
       el('div', { class: 'ghead' }, [
         el('b', { text: `${group.stop.name} · ${plural(group.days.length, 'day')}` }),
-        canEdit() && group.stop.id !== null ? iconButton('+', `Add a day to ${group.stop.name}`, () => addDay(group.stop)) : null,
+        canEdit() && group.stop.id !== null
+          ? el('div', { class: 'ghead-actions' }, [
+            actionButton('sparkle', `Generate days with AI for ${group.stop.name}`, () => generateDays(group.stop, group)),
+            iconButton('+', `Add a day to ${group.stop.name}`, () => addDay(group.stop)),
+          ])
+          : null,
       ]),
       ...body,
     ]);
@@ -386,12 +391,7 @@ function stopRow(group, index) {
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
-        ]),
-        el('div', { class: 'stop-edit-actions', role: 'group', 'aria-label': `Actions for ${stop.name}` }, [
-          actionButton('up', `Move ${stop.name} up`, () => moveStop(stop, -1), { disabled: stopMoveIds(state.stops, stop.id, -1) === null }),
-          actionButton('down', `Move ${stop.name} down`, () => moveStop(stop, 1), { disabled: stopMoveIds(state.stops, stop.id, 1) === null }),
-          actionButton('sparkle', `Generate days with AI for ${stop.name}`, () => generateDays(stop, group)),
-          actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true }),
+          el('span', { class: 'stop-edit-remove' }, actionButton('trash', `Remove ${stop.name}`, () => removeStop(stop, group.days.length), { danger: true })),
         ]),
       ]),
     ]);
@@ -608,12 +608,6 @@ function deleteDay(day) {
       resolve();
     }),
   });
-}
-
-function moveStop(stop, direction) {
-  const ids = stopMoveIds(state.stops, stop.id, direction);
-  if (!ids) return;
-  structure({ send: () => state.api.post(`trips/${state.id}/route-stops/reorder`, { orderedStopIds: ids }) });
 }
 
 function removeStop(stop, dayCount) {
