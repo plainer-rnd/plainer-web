@@ -517,3 +517,11 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .map-pin{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font:700 14px/1 Inter,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .pl .map-popup{display:flex;flex-direction:column;gap:2px;font:14px/1.3 Inter,system-ui,sans-serif}
 @media (max-width:720px){.pl .trip-map{height:280px}.pl .trip-map-pane{margin-bottom:16px}}
+
+/* Highlight the pin of the stop being pointed at in the list */
+.pl .map-pin{transition:transform .12s,box-shadow .12s}
+.pl .map-pin-wrap{transition:opacity .12s}
+.pl .map-pin-wrap.is-dim{opacity:.5}
+.pl .map-pin-wrap.is-active .map-pin{transform:scale(1.4);background:var(--draft,#C2603F);box-shadow:0 0 0 4px rgba(194,96,63,.3),0 2px 6px rgba(0,0,0,.4)}
+@media (prefers-reduced-motion:reduce){.pl .map-pin,.pl .map-pin-wrap{transition:none}}
+.pl .stop-row[data-stop-id]:hover:not(.stop-edit){background:var(--field)}

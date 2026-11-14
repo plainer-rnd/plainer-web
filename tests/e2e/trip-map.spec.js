@@ -25,6 +25,37 @@ test('the map pins every stop, numbered like the Route list, with a popup', asyn
   expect(map.y + map.height).toBeLessThanOrEqual(days.y);
 });
 
+test('hovering a stop in the list highlights its pin and fades the others', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(pins(page)).toHaveCount(3);
+  const pin = (name) => page.locator(`.leaflet-marker-icon[aria-label$="${name}"]`);
+  await expect(page.locator('.leaflet-marker-icon.is-active')).toHaveCount(0);
+  await page.locator('.stop-row', { hasText: 'Bergen' }).hover();
+  await expect(pin('Bergen')).toHaveClass(/is-active/);
+  await expect(pin('Oslo')).toHaveClass(/is-dim/);
+  await expect(pin('Flåm')).toHaveClass(/is-dim/);
+  await page.locator('.stop-row', { hasText: 'Flåm' }).hover();
+  await expect(pin('Flåm')).toHaveClass(/is-active/);
+  await expect(pin('Bergen')).toHaveClass(/is-dim/);
+  await page.mouse.move(0, 0);
+  await expect(page.locator('.leaflet-marker-icon.is-active')).toHaveCount(0);
+  await expect(page.locator('.leaflet-marker-icon.is-dim')).toHaveCount(0);
+});
+
+test('keyboard focus on a stop highlights it too, and the highlight survives an edit', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(pins(page)).toHaveCount(3);
+  await page.getByRole('button', { name: 'Edit stop Oslo' }).focus();
+  await expect(page.locator('.leaflet-marker-icon[aria-label$="Oslo"]')).toHaveClass(/is-active/);
+  await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
+  await page.getByRole('button', { name: 'More planned days for Oslo' }).click();
+  await expect(page.locator('.leaflet-marker-icon[aria-label$="Oslo"]')).toHaveClass(/is-active/);
+  await page.mouse.click(5, 5);
+  await expect(page.locator('.leaflet-marker-icon.is-active')).toHaveCount(0);
+});
+
 test('stops without coordinates are left off but keep their number', async ({ page }) => {
   const details = clone();
   details[1].stops.find((stop) => stop.location.name === 'Bergen').location.latitude = 0;

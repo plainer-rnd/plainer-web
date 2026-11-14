@@ -38,6 +38,24 @@ export function createTripMap({ section, canvas }) {
   let layer = null;
   let lastShape = '';
   let version = 0;
+  let activeId = null;
+  const markers = new Map();
+
+  // The stop being pointed at in the list stands out; the other pins fade back.
+  function applyHighlight() {
+    markers.forEach((marker, id) => {
+      const node = marker.getElement();
+      if (!node) return;
+      node.classList.toggle('is-active', activeId !== null && id === activeId);
+      node.classList.toggle('is-dim', activeId !== null && id !== activeId);
+      marker.setZIndexOffset(activeId !== null && id === activeId ? 1000 : 0);
+    });
+  }
+
+  function highlight(id) {
+    activeId = id;
+    applyHighlight();
+  }
 
   async function update(pins) {
     const mine = ++version;
@@ -59,6 +77,7 @@ export function createTripMap({ section, canvas }) {
     }
     // Pins always reflect the latest names and counts; the view only moves when the places themselves change.
     layer.clearLayers();
+    markers.clear();
     const points = pins.map((pin) => [pin.latitude, pin.longitude]);
     if (pins.length > 1) L.polyline(points, { color: '#7B6FD6', weight: 3, opacity: .7, dashArray: '2 8', lineCap: 'round' }).addTo(layer);
     pins.forEach((pin) => {
@@ -69,7 +88,9 @@ export function createTripMap({ section, canvas }) {
         if (!node) return;
         node.setAttribute('aria-label', `Stop ${pin.number}: ${pin.name}`);
         if (!node.firstChild) node.append(el('span', { class: 'map-pin', text: String(pin.number) }));
+        applyHighlight();
       });
+      markers.set(pin.id, marker);
       // Names are user data: the popup is built from DOM nodes, never from an HTML string.
       marker.bindPopup(el('div', { class: 'map-popup' }, [el('b', { text: `${pin.number}. ${pin.name}` }), el('span', { class: 'muted small', text: pin.meta })]));
       marker.addTo(layer);
@@ -84,5 +105,5 @@ export function createTripMap({ section, canvas }) {
     map.invalidateSize();
   }
 
-  return { update };
+  return { update, highlight };
 }

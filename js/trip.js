@@ -75,6 +75,21 @@ const nodes = {
 
 const tripMap = createTripMap({ section: nodes.mapPane, canvas: document.getElementById('trip-map') });
 
+// Hovering (or keyboard-focusing) a stop in the Route list highlights its pin on the map.
+(() => {
+  const stopIdOf = (event) => {
+    const row = event.target.closest && event.target.closest('[data-stop-id]');
+    return row && nodes.routeList.contains(row) ? Number(row.dataset.stopId) : null;
+  };
+  const canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+  if (canHover) {
+    nodes.routeList.addEventListener('mouseover', (event) => tripMap.highlight(stopIdOf(event)));
+    nodes.routeList.addEventListener('mouseleave', () => tripMap.highlight(null));
+  }
+  nodes.routeList.addEventListener('focusin', (event) => tripMap.highlight(stopIdOf(event)));
+  nodes.routeList.addEventListener('focusout', () => tripMap.highlight(null));
+})();
+
 // ---- autosave ----
 
 const SAVE_TEXT = { saving: 'Saving…', saved: '✓ All changes saved', error: 'Couldn’t save' };
@@ -395,7 +410,7 @@ function stopRow(group, index) {
   const number = el('span', { class: 'num', text: String(index + 1) });
 
   if (canEdit() && state.editingStop === stop.id) {
-    const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
+    const editor = el('div', { class: 'stop-row stop-edit', 'data-stop-id': String(stop.id), role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
       el('div', { class: 'stop-edit-body' }, [
         el('span', { class: 'day-title', text: stop.name }),
@@ -416,7 +431,7 @@ function stopRow(group, index) {
     el('span', { class: 'day-title', text: stop.name }),
     el('span', { class: 'muted small', text: stopMeta(stop, group.days.length) }),
   ]);
-  if (!canEdit()) return el('div', { class: 'stop-row' }, [number, text]);
+  if (!canEdit()) return el('div', { class: 'stop-row', 'data-stop-id': String(stop.id) }, [number, text]);
 
   const open = el('button', { type: 'button', class: 'stop-open', 'data-stop-open': String(stop.id), 'aria-label': `Edit stop ${stop.name}`, 'aria-expanded': 'false' }, [
     text,
@@ -428,7 +443,7 @@ function stopRow(group, index) {
     const done = document.querySelector('.stop-edit .stepper button:not(:disabled)');
     if (done) done.focus();
   });
-  const row = el('div', { class: 'stop-row' }, [number, open]);
+  const row = el('div', { class: 'stop-row', 'data-stop-id': String(stop.id) }, [number, open]);
   dragAndDrop(row, { kind: 'stop', scope: 'route', item: stop, onDrop: dropStop });
   return row;
 }
