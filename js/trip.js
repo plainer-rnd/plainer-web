@@ -240,8 +240,8 @@ function stepperFor(stop) {
 }
 
 function transportSelect(stop) {
-  const select = el('select', { class: 'transport-select', 'aria-label': `Getting to ${stop.name}` }, [
-    el('option', { value: '', text: 'Getting there' }),
+  const select = el('select', { class: 'transport-select', id: `transport-${stop.id}`, 'aria-label': `Getting to ${stop.name}` }, [
+    el('option', { value: '', text: 'Not set' }),
     ...TRANSPORT_TYPES.map((type) => el('option', { value: type, text: type })),
   ]);
   select.value = stop.transport || '';
@@ -274,7 +274,10 @@ function stopRow(group, index) {
       number,
       el('div', { class: 'stop-edit-body' }, [
         el('span', { class: 'day-title', text: stop.name }),
-        el('div', { class: 'stop-edit-fields' }, [stepperFor(stop), transportSelect(stop)]),
+        el('div', { class: 'stop-edit-fields' }, [
+          el('div', { class: 'field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
+          el('div', { class: 'field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Getting there' }), transportSelect(stop)]),
+        ]),
         el('div', { class: 'stop-edit-actions' }, done),
       ]),
     ]);

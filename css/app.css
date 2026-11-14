@@ -389,3 +389,6 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .stop-edit .stepper button{width:36px;height:36px}
 .pl .stepper button:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:720px){.pl .stop-edit .stepper button{width:44px;height:44px}}
+.pl .stop-edit-fields{align-items:flex-end;gap:12px}
+.pl .stop-edit .field{display:flex;flex-direction:column;gap:4px}
+.pl .stop-edit .field-label{font-size:12px;font-weight:600;color:var(--t3)}
