@@ -24,6 +24,7 @@ const state = {
   sharedBy: null,
   expanded: new Set(),
   pane: 'overview',
+  editingStop: null,
   api: null,
   id: null,
 };
@@ -224,7 +225,7 @@ function renderDays() {
   nodes.daysList.replaceChildren(...(groups.length ? groups : [el('p', { class: 'muted empty-note', text: 'No stops or days yet. Plan them in the Plainer app.' })]));
 }
 
-function stopControls(stop) {
+function stepperFor(stop) {
   const planned = (delta) => {
     const next = stop.plannedDays + delta;
     if (next < 1) return;
@@ -235,7 +236,10 @@ function stopControls(stop) {
   minus.disabled = stop.plannedDays <= 1;
   minus.addEventListener('click', () => planned(-1));
   plus.addEventListener('click', () => planned(1));
+  return el('div', { class: 'stepper', role: 'group', 'aria-label': `Planned days for ${stop.name}` }, [minus, el('span', { text: String(stop.plannedDays) }), plus]);
+}
 
+function transportSelect(stop) {
   const select = el('select', { class: 'transport-select', 'aria-label': `Getting to ${stop.name}` }, [
     el('option', { value: '', text: 'Getting there' }),
     ...TRANSPORT_TYPES.map((type) => el('option', { value: type, text: type })),
@@ -245,24 +249,62 @@ function stopControls(stop) {
     if (!select.value) { select.value = stop.transport || ''; return; }
     editStop(stop, { transport: select.value }, { transport: select.value });
   });
+  return select;
+}
 
-  return el('div', { class: 'stop-controls' }, [
-    el('div', { class: 'stepper', role: 'group', 'aria-label': `Planned days for ${stop.name}` }, [minus, el('span', { text: String(stop.plannedDays) }), plus]),
-    select,
+const PENCIL = '<path d="M4 20h4L19 9l-4-4L4 16z"></path>';
+
+function closeStopEditor() {
+  const id = state.editingStop;
+  state.editingStop = null;
+  render();
+  const opener = id === null ? null : document.querySelector(`[data-stop-open="${id}"]`);
+  if (opener) opener.focus();
+}
+
+// One compact row per stop. Opening a stop turns just that row into an editor; only one is open at a time.
+function stopRow(group, index) {
+  const { stop } = group;
+  const number = el('span', { class: 'num', text: String(index + 1) });
+
+  if (canEdit() && state.editingStop === stop.id) {
+    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Done' });
+    done.addEventListener('click', closeStopEditor);
+    const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
+      number,
+      el('div', { class: 'stop-edit-body' }, [
+        el('span', { class: 'day-title', text: stop.name }),
+        el('div', { class: 'stop-edit-fields' }, [stepperFor(stop), transportSelect(stop)]),
+        el('div', { class: 'stop-edit-actions' }, done),
+      ]),
+    ]);
+    editor.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.stopPropagation(); closeStopEditor(); }
+    });
+    return editor;
+  }
+
+  const text = el('span', { class: 'day-text' }, [
+    el('span', { class: 'day-title', text: stop.name }),
+    el('span', { class: 'muted small', text: stopMeta(stop, group.days.length) }),
   ]);
+  if (!canEdit()) return el('div', { class: 'stop-row' }, [number, text]);
+
+  const open = el('button', { type: 'button', class: 'stop-open', 'data-stop-open': String(stop.id), 'aria-label': `Edit stop ${stop.name}`, 'aria-expanded': 'false' }, [
+    text,
+    (() => { const icon = svg(PENCIL); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('width', '16'); icon.setAttribute('height', '16'); icon.setAttribute('fill', 'none'); icon.setAttribute('stroke', 'currentColor'); icon.setAttribute('stroke-width', '2'); icon.setAttribute('stroke-linecap', 'round'); icon.setAttribute('stroke-linejoin', 'round'); icon.setAttribute('aria-hidden', 'true'); icon.classList.add('pencil'); return icon; })(),
+  ]);
+  open.addEventListener('click', () => {
+    state.editingStop = stop.id;
+    render();
+    const done = document.querySelector('.stop-edit .stepper button:not(:disabled)');
+    if (done) done.focus();
+  });
+  return el('div', { class: 'stop-row' }, [number, open]);
 }
 
 function renderRoute() {
-  const rows = state.groups.filter((group) => group.stop.id !== null).map((group, index) => (
-    el('div', { class: 'hrow stop-row' }, [
-      el('span', { class: 'num', text: String(index + 1) }),
-      el('div', { class: 'day-text' }, [
-        el('span', { class: 'day-title', text: group.stop.name }),
-        el('span', { class: 'muted small', text: stopMeta(group.stop, group.days.length) }),
-        canEdit() ? stopControls(group.stop) : null,
-      ]),
-    ])
-  ));
+  const rows = state.groups.filter((group) => group.stop.id !== null).map(stopRow);
   nodes.routeList.replaceChildren(...(rows.length ? rows : [el('p', { class: 'muted empty-note', text: 'This trip has no stops yet.' })]));
 }
 

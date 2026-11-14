@@ -84,10 +84,13 @@ test('planned days and transport are saved on the stop', async ({ page }) => {
   await mockApi(page, { requests });
   await page.goto('/trip/?id=1');
 
+  await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
   await page.getByRole('button', { name: 'More planned days for Oslo' }).click();
-  await expect(page.locator('#route-list .stop-row').first()).toContainText('Planned: 3');
   await page.getByLabel('Getting to Oslo').selectOption('Cruise');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('#route-list .stop-row').first()).toContainText('Planned: 3');
   await expect(page.locator('#route-list .stop-row').first()).toContainText('Cruise');
+  await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
   await expect(page.getByRole('button', { name: 'Fewer planned days for Bergen' })).toBeDisabled();
 
   const stopWrites = writes(requests).filter((r) => r.path === '/api/trips/1/route-stops/11');
@@ -172,12 +175,37 @@ test('returning to the tab refreshes the trip when nothing is being saved', asyn
   await expect(page.locator('#trip-name')).toHaveText('Changed elsewhere');
 });
 
+test('stops are compact rows; only one opens for editing at a time', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(page.locator('.stepper')).toHaveCount(0);
+  await expect(page.locator('select')).toHaveCount(0);
+
+  const oslo = page.getByRole('button', { name: 'Edit stop Oslo' });
+  const pencil = oslo.locator('.pencil');
+  await expect(pencil).toHaveCSS('opacity', '0');
+  await oslo.hover();
+  await expect(pencil).toHaveCSS('opacity', '1');
+
+  await oslo.click();
+  await expect(page.getByRole('group', { name: 'Editing Oslo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
+  await expect(page.getByRole('group', { name: 'Editing Bergen' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Editing Oslo' })).toHaveCount(0);
+  await expect(page.locator('.stop-edit')).toHaveCount(1);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.stop-edit')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit stop Bergen' })).toBeFocused();
+});
+
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 800 } });
   test('stop controls are tappable and nothing scrolls sideways', async ({ page }) => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
     await page.getByRole('tab', { name: 'Stops' }).click();
+    await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
     const plus = page.getByRole('button', { name: 'More planned days for Oslo' });
     const box = await plus.boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
@@ -186,16 +214,3 @@ test.describe('phone', () => {
   });
 });
 
-test('stop controls appear on hover and keyboard focus on desktop', async ({ page }) => {
-  await mockApi(page);
-  await page.goto('/trip/?id=1');
-  const row = page.locator('#route-list .stop-row').first();
-  const controls = row.locator('.stop-controls');
-  await expect(controls).toHaveCSS('opacity', '0');
-  await row.hover();
-  await expect(controls).toHaveCSS('opacity', '1');
-  await page.mouse.move(0, 0);
-  await expect(controls).toHaveCSS('opacity', '0');
-  await page.getByRole('button', { name: 'More planned days for Oslo' }).focus();
-  await expect(controls).toHaveCSS('opacity', '1');
-});

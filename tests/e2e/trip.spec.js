@@ -155,6 +155,7 @@ test.describe('trip details', () => {
     await expect(page.locator('#readonly-note')).toHaveText('Shared by Olena · view only');
     await expect(page.locator('.editable')).toHaveCount(0);
     await expect(page.locator('.stepper')).toHaveCount(0);
+    await expect(page.locator('.stop-open')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'More trip actions' }).click();
     await expect(page.getByRole('menuitem')).toHaveText(['Leave trip…']);

@@ -324,8 +324,20 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .group+.group{border-top:1px solid var(--line)}
 .pl .ghead{display:flex;align-items:center;padding:12px 16px 8px;min-height:48px}
 .pl .ghead b{color:var(--lav-t);font-size:14px}
-.pl .hrow.day-row,.pl .hrow.stop-row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px}
+.pl .hrow.day-row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px}
+.pl .stop-row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px}
 .pl .stop-row+.stop-row{border-top:1px solid var(--line)}
+.pl .stop-open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;margin:-6px -8px -6px 0;padding:6px 8px;border:0;border-radius:12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background .12s}
+.pl .stop-open:hover,.pl .stop-open:focus-visible{background:var(--mint2)}
+.pl .stop-open .day-text{flex:1}
+.pl .stop-open .pencil{flex:0 0 auto;color:var(--t3);opacity:0;transition:opacity .12s}
+.pl .stop-open:hover .pencil,.pl .stop-open:focus-visible .pencil{opacity:1}
+@media (hover:none){.pl .stop-open .pencil{opacity:1}}
+.pl .stop-edit{align-items:flex-start;margin:6px;padding:12px;border:1.5px solid var(--green);border-radius:16px;background:var(--mint2)}
+.pl .stop-edit+.stop-row,.pl .stop-row+.stop-edit{border-top:1.5px solid var(--green)}
+.pl .stop-edit-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.pl .stop-edit-fields{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pl .stop-edit-actions{display:flex;justify-content:flex-end}
 .pl .day-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pl .day-title{font-weight:600;font-size:16px;overflow-wrap:anywhere}
 .pl .small{font-size:13px}
@@ -360,11 +372,6 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .editable.is-empty{color:var(--t3);font-style:italic}
 .pl .day-text .editable.day-title{font-weight:600;font-size:16px;align-self:flex-start}
 .pl .plan-edit{display:block;width:100%;white-space:pre-wrap;font-size:15px;line-height:1.55;overflow-wrap:anywhere;margin:0 0 0 -6px;padding:2px 6px;width:calc(100% + 6px)}
-.pl .stop-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;opacity:0;transition:opacity .12s}
-.pl .stop-row:hover .stop-controls,.pl .stop-row:focus-within .stop-controls{opacity:1}
-@media (hover:none){.pl .stop-controls{opacity:1}}
-.pl .stop-controls .stepper button{width:36px;height:36px}
-.pl .stop-controls .stepper button:disabled{opacity:.4;cursor:not-allowed}
 .pl .transport-select{min-height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;padding:0 10px}
 .pl .dialog{border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--ink);padding:24px;max-width:440px;width:calc(100% - 32px);box-shadow:var(--shadow)}
 .pl .dialog::backdrop{background:rgba(0,0,0,.5)}
@@ -375,7 +382,10 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
   .pl .trip-head{min-width:0;flex:1}
   .pl .trip-actions{flex-direction:column-reverse;align-items:flex-end;gap:6px}
   .pl .save-status{font-size:12px;max-width:96px;text-align:right;flex-wrap:wrap;justify-content:flex-end}
-  .pl .stop-controls{opacity:1}
-  .pl .stop-controls .stepper button{height:44px;width:44px}
+  .pl .stop-edit .stepper button{height:44px;width:44px}
   .pl .transport-select{min-height:44px}
+  .pl .stop-open .pencil{opacity:1}
 }
+.pl .stop-edit .stepper button{width:36px;height:36px}
+.pl .stepper button:disabled{opacity:.4;cursor:not-allowed}
+@media (max-width:720px){.pl .stop-edit .stepper button{width:44px;height:44px}}
