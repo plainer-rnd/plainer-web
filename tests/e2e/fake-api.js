@@ -116,6 +116,24 @@ async function mockApi(page, options = {}) {
       return json(200, { requestId: 'r', result: { issueHash: body.issueHash, issueCode: body.issueCode, issueName: 'x', options: options.noSuggestions ? [] : byCode[body.issueCode] || [] } });
     }
     if (/\/merge-days$/.test(url.pathname) && request.method() === 'POST') { fixed.add('h-oslo'); return json(200, { requestId: 'r', result: {} }); }
+    const chat = url.pathname.match(/^\/api\/trips\/(\d+)\/chat$/);
+    if (chat && request.method() === 'POST') {
+      if (options.chatStatus) return json(options.chatStatus, { error: { message: options.chatMessage || 'boom' } });
+      const body = JSON.parse(request.postData());
+      const reply = (status, text, extra = {}) => json(200, { requestId: 'r', result: { reply: text, status, actionPlanId: null, proposedActions: null, createdEntities: null, deletedEntities: null, ...extra } });
+      if (body.actionPlanId) {
+        const detail = details[chat[1]];
+        const day = { id: ++nextId, tripId: 1, routeStopId: 11, order: 2, title: 'Extra day in Oslo', description: '<p>Fjord cruise.</p>' };
+        detail.days.filter((d) => d.order >= 2).forEach((d) => { d.order += 1; });
+        detail.days.push(day);
+        return reply('Completed', 'Done! I added a day in Oslo.', { createdEntities: [{ type: 'day', id: day.id, name: day.title }] });
+      }
+      const text = body.messages[body.messages.length - 1].content;
+      if (/weather/i.test(text)) return reply('OutOfScope', 'I can only help with your trip plan.');
+      if (/somewhere/i.test(text)) return reply('ClarificationNeeded', 'Which place do you mean?');
+      if (/cancel/i.test(text)) return reply('ClarificationNeeded', 'Okay, I won’t change anything.');
+      return reply('PendingConfirmation', 'I can add one more day in Oslo. Shall I go ahead?', { actionPlanId: 'plan-1', proposedActions: [{ description: 'Generate a 1-day itinerary for Oslo' }] });
+    }
     const generate = url.pathname.match(/^\/api\/trips\/(\d+)\/route-stops\/(\d+)\/generate-days$/);
     if (generate && request.method() === 'POST') {
       if (options.generateStatus) return json(options.generateStatus, { error: { message: options.generateMessage || 'boom' } });

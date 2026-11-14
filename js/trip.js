@@ -16,6 +16,7 @@ import { confirmDialog, openDialog } from './dialogs.js';
 import { openShareDialog } from './share-dialog.js';
 import { openGenerateDaysDialog } from './ai-days-dialog.js';
 import { createTripMap } from './trip-map.js';
+import { createTripChat } from './trip-chat.js';
 import { openReviewDialog } from './validation-review.js';
 import { readDismissed, reviewCounts, writeDismissed } from './validation-model.js';
 
@@ -66,6 +67,7 @@ const nodes = {
   live: document.getElementById('trip-status-live'),
   readonlyNote: document.getElementById('readonly-note'),
   addStop: document.getElementById('add-stop'),
+  assistantBtn: document.getElementById('assistant-btn'),
   shareBtn: document.getElementById('share-btn'),
   exportBtn: document.getElementById('export-btn'),
   menuWrap: document.getElementById('trip-menu-wrap'),
@@ -416,7 +418,7 @@ function closeStopEditor({ restoreFocus = true } = {}) {
 // (Clicks on another stop's row are left to that row, which opens it.)
 document.addEventListener('click', (event) => {
   if (state.editingStop === null) return;
-  if (event.target.closest('.stop-edit, [data-stop-open], dialog')) return;
+  if (event.target.closest('.stop-edit, [data-stop-open], dialog, .chat-panel')) return;
   closeStopEditor({ restoreFocus: false });
 });
 
@@ -536,6 +538,7 @@ function render() {
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();
   nodes.shareBtn.hidden = !canEdit();
+  nodes.assistantBtn.hidden = !canEdit();
   nodes.exportBtn.hidden = false;
 }
 
@@ -829,6 +832,27 @@ function renderMenu() {
 nodes.addStop.addEventListener('click', addStop);
 nodes.draftSwitch.addEventListener('change', () => editTrip('isDraft', nodes.draftSwitch.checked));
 
+let chat = null;
+
+// The assistant is a side panel the page stays usable beside. When it changes the trip, the page is read back, but not
+// while the user is typing in a field or an edit is still saving (that would wipe what they are doing).
+async function reloadAfterAssistant() {
+  for (let waited = 0; waited < 15000; waited += 300) {
+    const typing = document.activeElement && document.activeElement.classList.contains('inline-input');
+    if (!typing && !queue.isBusy()) break;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  await load(state.api, state.id);
+  render();
+}
+
+function ensureChat() {
+  if (!chat) chat = createTripChat({ api: state.api, tripId: state.id, onChanged: reloadAfterAssistant, opener: nodes.assistantBtn });
+  return chat;
+}
+
+nodes.assistantBtn.addEventListener('click', () => ensureChat().toggle());
+
 nodes.shareBtn.addEventListener('click', () => {
   openShareDialog({
     api: state.api, tripId: state.id, tripName: state.trip.name,
@@ -913,6 +937,10 @@ async function start() {
   render();
   nodes.skeleton.hidden = true;
   nodes.app.hidden = false;
+  if (canEdit()) {
+    const assistant = ensureChat();
+    if (assistant.wasOpen) assistant.open({ focus: false }); // picked up where it was left, even after a reload
+  }
 }
 
 wirePaneTabs();
