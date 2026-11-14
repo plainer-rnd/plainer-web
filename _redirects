@@ -1,6 +1,8 @@
 /contact              /support/  301
 /contact/             /support/  301
 /wtm                  /wtm/      301
+# Share-by-link URLs are opened by the iPhone app as universal links, so the exact path (no trailing slash) must keep working here
+/join-shared-trip     /join-shared-trip/  200
 /demo                  /          302
 /demo/                 /          302
 

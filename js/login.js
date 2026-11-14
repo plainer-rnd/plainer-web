@@ -13,6 +13,11 @@ const fields = {
   form: { input: null, error: document.getElementById('form-error') },
 };
 
+// Someone arriving from a share link may need an account first: the sign-up page must also bring them back.
+const signupLink = document.querySelector('a[href="/signup/"]');
+const next = new URLSearchParams(location.search).get('next');
+if (signupLink && next) signupLink.href = '/signup/?next=' + encodeURIComponent(nextUrl());
+
 getUser().then((user) => {
   if (user) location.replace(nextUrl());
 });

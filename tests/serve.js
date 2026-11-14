@@ -15,7 +15,8 @@ http.createServer((request, response) => {
   const pathname = decodeURIComponent(new URL(request.url, 'http://x').pathname);
   let file = path.join(root, pathname);
   if (!file.startsWith(root)) { response.writeHead(403).end(); return; }
-  if (pathname.endsWith('/')) file = path.join(file, 'index.html');
+  // Like Netlify's rewrite for /join-shared-trip: a folder with an index page is served without a trailing slash (query kept).
+  if (pathname.endsWith('/') || (fs.existsSync(file) && fs.statSync(file).isDirectory())) file = path.join(file, 'index.html');
   fs.readFile(file, (error, data) => {
     if (error) { response.writeHead(404).end('Not found'); return; }
     response.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }).end(data);

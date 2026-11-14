@@ -14,3 +14,11 @@
 
 /apple-app-site-association
   Content-Type: application/json
+
+# The link code is a secret in the URL: never leak it through Referer, and never cache the page.
+/join-shared-trip
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
+/join-shared-trip/
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store
