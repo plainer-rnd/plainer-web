@@ -486,3 +486,25 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .spinner{width:40px;height:40px;margin:16px auto 8px;border-radius:50%;border:4px solid var(--line2);border-top-color:var(--green);animation:pl-spin .9s linear infinite}
 @keyframes pl-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.pl .spinner{animation-duration:2.4s}}
+
+/* Validation review */
+.pl .review-dialog{max-width:640px;max-height:88vh;overflow:auto}
+.pl .review-h{font-size:12px!important;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 8px!important}
+.pl .review-section.critical .review-h{color:var(--danger,#B3261E)}
+.pl .review-section.advisory .review-h{color:var(--draft)}
+.pl .issue-group h4{margin:12px 0 6px;font-size:15px}
+.pl .issue-card{border:1px solid var(--line2);border-left:4px solid var(--draft);border-radius:12px;padding:12px;margin-bottom:8px;background:var(--surface)}
+.pl .issue-card.critical{border-left-color:var(--danger,#B3261E)}
+.pl .issue-message{font-size:14px;margin:0 0 6px!important}
+.pl .issue-tip{margin:0 0 8px!important}
+.pl .issue-actions{display:flex;gap:8px;justify-content:flex-end}
+.pl .review-empty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px 0}
+.pl .review-status{min-height:20px;color:var(--green);font-size:14px;margin:0 0 4px!important}
+.pl .review-back{margin-bottom:8px}
+.pl .option-card{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:8px}
+.pl .option-card p{margin:0!important;font-size:14px;flex:1}
+.pl .spinner.small{display:inline-block;width:14px;height:14px;margin:0 6px -2px 0;border-width:2px}
+@media (max-width:640px){.pl .issue-actions .btn,.pl .option-card .btn,.pl .review-back .btn{min-height:44px}.pl .option-card{flex-direction:column;align-items:stretch}}
+.pl .btn-primary .spinner.small{border-color:rgba(255,255,255,.45);border-top-color:#fff;margin-bottom:-2px}
+.pl .option-card .btn:disabled{opacity:1}
+.pl .option-card .btn:disabled:not(:has(.spinner)){opacity:.5}
