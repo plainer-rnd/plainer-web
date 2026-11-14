@@ -268,7 +268,7 @@ function stopRow(group, index) {
   const number = el('span', { class: 'num', text: String(index + 1) });
 
   if (canEdit() && state.editingStop === stop.id) {
-    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm done-btn', 'aria-label': 'Done', title: 'Done', text: '✅' });
+    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm done-btn', 'aria-label': 'Done', title: 'Done', text: '✓' });
     done.addEventListener('click', closeStopEditor);
     const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
