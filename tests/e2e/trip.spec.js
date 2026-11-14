@@ -142,7 +142,7 @@ test.describe('trip details', () => {
   test('deferred actions are not rendered, and there is no Save button', async ({ page }) => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
-    for (const name of ['Share', 'Export PDF', 'Save changes', 'Save', 'Review']) {
+    for (const name of ['Save changes', 'Save', 'Review']) {
       await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
     await expect(page.locator('.pane-tabs')).toBeHidden();

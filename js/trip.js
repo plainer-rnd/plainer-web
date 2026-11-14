@@ -6,12 +6,13 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
-  insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
+  pdfFileName, insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
 import { createSaveQueue } from './save-queue.js';
 import { confirmDialog, openDialog } from './dialogs.js';
+import { openShareDialog } from './share-dialog.js';
 
 const STATUS_LABEL = { draft: 'Draft', upcoming: 'Upcoming', active: 'Active' };
 
@@ -55,6 +56,8 @@ const nodes = {
   live: document.getElementById('trip-status-live'),
   readonlyNote: document.getElementById('readonly-note'),
   addStop: document.getElementById('add-stop'),
+  shareBtn: document.getElementById('share-btn'),
+  exportBtn: document.getElementById('export-btn'),
   menuWrap: document.getElementById('trip-menu-wrap'),
   menuButton: document.getElementById('trip-menu-button'),
   menu: document.getElementById('trip-menu'),
@@ -473,6 +476,8 @@ function render() {
   nodes.daysSub.textContent = `· ${plural(state.days.filter(hasPlan).length, 'day')} with a plan`;
   nodes.routeSub.textContent = `· ${plural(state.stops.length, 'stop')}`;
   nodes.addStop.hidden = !canEdit();
+  nodes.shareBtn.hidden = !canEdit();
+  nodes.exportBtn.hidden = false;
 }
 
 function showMessage(title, text, action, role) {
@@ -730,6 +735,31 @@ function renderMenu() {
 }
 
 nodes.addStop.addEventListener('click', addStop);
+
+nodes.shareBtn.addEventListener('click', () => {
+  openShareDialog({
+    api: state.api, tripId: state.id, tripName: state.trip.name,
+    onChange: (shares) => { state.people = sharedPeople(shares); renderHeader(); },
+  });
+});
+
+nodes.exportBtn.addEventListener('click', async () => {
+  const label = nodes.exportBtn.querySelector('.btn-label');
+  nodes.exportBtn.disabled = true;
+  label.textContent = 'Preparing…';
+  try {
+    const blob = await state.api.download(`trips/${state.id}/export/pdf`);
+    const link = el('a', { href: URL.createObjectURL(blob), download: pdfFileName(state.trip.name) });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  } catch (error) {
+    flashError('Couldn’t export this trip. Please try again.');
+  }
+  label.textContent = 'Export PDF';
+  nodes.exportBtn.disabled = false;
+});
 
 nodes.menuButton.addEventListener('click', () => {
   const open = nodes.menu.hidden;
