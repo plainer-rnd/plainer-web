@@ -64,7 +64,7 @@ async function mockApi(page, options = {}) {
     options.requests?.push({ method: request.method(), path: url.pathname, search: url.search, authorization: request.headers().authorization, body: request.postData() ? JSON.parse(request.postData()) : null });
     const json = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
-    if (url.pathname === '/api/trips') return options.tripsStatus && options.tripsStatus !== 200
+    if (url.pathname === '/api/trips' && request.method() === 'GET') return options.tripsStatus && options.tripsStatus !== 200
       ? json(options.tripsStatus, { error: 'boom' })
       : json(200, { requestId: 'r', result: trips });
     if (url.pathname === '/api/trip-shares/by') return json(200, { requestId: 'r', result: sharedBy });
