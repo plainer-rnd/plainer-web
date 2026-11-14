@@ -268,7 +268,7 @@ function stopRow(group, index) {
   const number = el('span', { class: 'num', text: String(index + 1) });
 
   if (canEdit() && state.editingStop === stop.id) {
-    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Done' });
+    const done = el('button', { type: 'button', class: 'btn btn-primary btn-sm done-btn', 'aria-label': 'Done', title: 'Done', text: '✅' });
     done.addEventListener('click', closeStopEditor);
     const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
@@ -277,8 +277,8 @@ function stopRow(group, index) {
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
+          done,
         ]),
-        el('div', { class: 'stop-edit-actions' }, done),
       ]),
     ]);
     editor.addEventListener('keydown', (event) => {
