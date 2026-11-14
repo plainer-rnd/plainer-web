@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=24">
+<link rel="stylesheet" href="/css/app.css?v=25">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/trips.js?v=3"></script>
+<script type="module" src="/js/trips.js?v=4"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -50,7 +50,10 @@
         <h1 class="display">Trips</h1>
         <span class="muted" id="page-sub"></span>
       </div>
-      <button type="button" class="btn btn-primary" id="new-trip">New trip</button>
+      <div class="page-actions">
+        <button type="button" class="btn btn-outline" id="import-pdf">Import PDF</button>
+        <button type="button" class="btn btn-primary" id="new-trip">New trip</button>
+      </div>
     </div>
 
     <div class="tabs" role="tablist" aria-label="Which trips">

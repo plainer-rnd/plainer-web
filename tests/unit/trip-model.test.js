@@ -135,3 +135,32 @@ test('share error messages and pdf file names', () => {
   assert.equal(pdfFileName('a/b:c*?"<>|d'), 'Plainer – a b c d.pdf');
   assert.equal(pdfFileName('   '), 'Plainer – Trip.pdf');
 });
+
+test('importFileProblem checks presence, size and type', async () => {
+  const { importFileProblem } = await import('../../js/trip-model.js');
+  assert.equal(importFileProblem(null), 'Choose a PDF file first.');
+  assert.equal(importFileProblem({ name: 'a.pdf', size: 0 }), 'That file is empty.');
+  assert.equal(importFileProblem({ name: 'a.pdf', size: 3 * 1024 * 1024 + 1 }), 'That file is larger than 3 MB.');
+  assert.equal(importFileProblem({ name: 'a.docx', size: 10, type: '' }), 'Choose a PDF file.');
+  assert.equal(importFileProblem({ name: 'plan.PDF', size: 10, type: '' }), null);
+  assert.equal(importFileProblem({ name: 'plan', size: 10, type: 'application/pdf' }), null);
+});
+
+test('importOutcome separates rejected, clean and partial imports', async () => {
+  const { importOutcome } = await import('../../js/trip-model.js');
+  assert.deepEqual(importOutcome({ rejectionReason: 'Not a trip.', tripId: null }), { created: false, reason: 'Not a trip.' });
+  assert.equal(importOutcome({ tripId: null }).created, false);
+  const clean = importOutcome({ tripId: 9, tripName: 'Rome', routeStopCount: 2, dayCount: 5, routeStops: [{ name: 'Rome', daysMissing: false }], unresolvedStopNames: [] });
+  assert.equal(clean.needsReview, false);
+  assert.equal(clean.dayCount, 5);
+  const partial = importOutcome({ tripId: 9, tripName: 'Rome', routeStopCount: 2, dayCount: 5, routeStops: [{ name: 'Rome', daysMissing: true }], unresolvedStopNames: ['Atlantis'] });
+  assert.deepEqual([partial.needsReview, partial.partial, partial.unresolved], [true, ['Rome'], ['Atlantis']]);
+});
+
+test('importErrorMessage', async () => {
+  const { importErrorMessage } = await import('../../js/trip-model.js');
+  assert.match(importErrorMessage(0), /internet/);
+  assert.equal(importErrorMessage(400, 'The file is not a PDF.'), 'The file is not a PDF.');
+  assert.equal(importErrorMessage(400, 'Request failed with status 400'), 'That file can’t be imported.');
+  assert.match(importErrorMessage(500, 'x'), /Couldn’t import/);
+});

@@ -254,3 +254,42 @@ export function pdfFileName(tripName) {
   const clean = String(tripName).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
   return `Plainer – ${clean || 'Trip'}.pdf`;
 }
+
+// ---- import PDF ----
+
+export const IMPORT_MAX_BYTES = 3 * 1024 * 1024;
+
+// Why a chosen file can't be imported, or null if it looks fine. The server checks again (and also the %PDF- signature).
+export function importFileProblem(file) {
+  if (!file) return 'Choose a PDF file first.';
+  if (file.size === 0) return 'That file is empty.';
+  if (file.size > IMPORT_MAX_BYTES) return 'That file is larger than 3 MB.';
+  if (!/\.pdf$/i.test(file.name || '') && file.type !== 'application/pdf') return 'Choose a PDF file.';
+  return null;
+}
+
+// What the import produced. `created` is false when the server declined the file (nothing was added).
+export function importOutcome(result) {
+  if (!result || !result.tripId) {
+    return { created: false, reason: (result && result.rejectionReason) || 'That PDF doesn’t look like a trip plan.' };
+  }
+  const stops = result.routeStops || [];
+  const unresolved = result.unresolvedStopNames || [];
+  const partial = stops.filter((stop) => stop.daysMissing).map((stop) => stop.name);
+  return {
+    created: true,
+    tripId: result.tripId,
+    tripName: result.tripName || 'Imported trip',
+    stopCount: result.routeStopCount ?? stops.length,
+    dayCount: result.dayCount ?? 0,
+    unresolved,
+    partial,
+    needsReview: unresolved.length > 0 || partial.length > 0,
+  };
+}
+
+export function importErrorMessage(status, serverMessage) {
+  if (status === 0) return 'Check your internet connection and try again.';
+  if (status === 400 || status === 413) return serverMessage && !/^Request failed/.test(serverMessage) ? serverMessage : 'That file can’t be imported.';
+  return 'Couldn’t import the PDF. Please try again.';
+}
