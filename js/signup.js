@@ -4,6 +4,10 @@ import { setBusy, showError, clearErrors, showAuthError } from './auth-ui.js';
 
 const MIN_PASSWORD_LENGTH = 8;
 
+// Arriving from a share link: logging in instead must also bring them back to the trip.
+const loginLink = document.querySelector('a[href="/login/"]');
+if (loginLink && new URLSearchParams(location.search).get('next')) loginLink.href = '/login/?next=' + encodeURIComponent(nextUrl());
+
 const form = document.getElementById('signup-form');
 const name = document.getElementById('name');
 const email = document.getElementById('email');

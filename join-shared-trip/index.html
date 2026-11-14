@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" class="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{var t=localStorage.getItem("plainerTheme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t}catch(e){}</script>
+<title>Shared trip | Plainer</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F6F6F3">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css?v=42">
+<script src="/js/theme.js?v=1" defer></script>
+<script type="module" src="/js/join.js?v=1"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="hdr">
+  <div class="hdr-in">
+    <a class="brand" href="/"><img src="/assets/app-icon.png" alt="" width="34" height="34"><span>Plainer</span></a>
+    <div class="spacer"></div>
+    <button type="button" class="icon-btn" data-theme-toggle aria-label="Switch to dark theme"><svg class="theme-moon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg><svg class="theme-sun" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+  </div>
+</header>
+<main class="wrap page trip-page join-page" id="main">
+  <div class="skeleton-grid" id="skeleton" aria-busy="true">
+    <p class="visually-hidden" role="status">Loading the shared trip</p>
+    <div class="skel skel-title"></div>
+    <div class="skel skel-panel tall"></div>
+  </div>
+  <div id="message" hidden></div>
+
+  <section id="app-landing" class="panel card-pad join-landing" aria-labelledby="landing-title" hidden></section>
+
+  <div id="join-app" hidden>
+    <section class="panel card-pad join-bar" aria-label="Add this trip to your list">
+      <div class="join-bar-text">
+        <b id="join-bar-title">You’re viewing a shared trip</b>
+        <span class="t2" id="join-bar-sub">It’s read-only. Log in to add it to your list.</span>
+      </div>
+      <div class="join-bar-action" id="join-cta"></div>
+      <p class="error join-error" id="join-error" role="alert"></p>
+    </section>
+
+    <div class="trip-head">
+      <h1 class="display trip-title" id="join-name"></h1>
+      <div class="trip-meta t2" id="join-meta"></div>
+    </div>
+
+    <section class="trip-map-pane" id="pane-map" aria-label="Map of the trip’s stops" hidden>
+      <div class="trip-map" id="trip-map" role="region" aria-label="Map of the trip’s stops"></div>
+    </section>
+
+    <div class="trip-cols">
+      <section class="days-col" aria-labelledby="days-h">
+        <div class="col-head"><h2 id="days-h" class="display">Days</h2><span class="muted" id="days-sub"></span></div>
+        <div class="panel itinerary" id="days-list"></div>
+      </section>
+      <aside class="route-col" aria-labelledby="route-h">
+        <div class="col-head"><h2 id="route-h" class="display">Route</h2><span class="muted" id="route-sub"></span></div>
+        <div class="panel itinerary" id="route-list"></div>
+      </aside>
+    </div>
+  </div>
+  <noscript><p class="notice">This page needs JavaScript. Please turn it on and reload.</p></noscript>
+</main>
+</body>
+</html>

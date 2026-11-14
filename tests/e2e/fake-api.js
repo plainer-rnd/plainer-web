@@ -11,6 +11,7 @@ const sampleTrips = [
   { id: 6, name: 'Max’s Alps', startDate: farPast, isDraft: false, shareId: 60, sharedBy: 'Max' },
 ];
 
+const KNOWN_LINK = '7f1f8c0e-5b8a-4f27-9d73-0d2b9a0f6c11';
 const COORDS = { Oslo: [59.9139, 10.7522], Bergen: [60.3913, 5.3221], 'Flåm': [60.8629, 7.1141], Stavanger: [58.97, 5.7331], Lisbon: [38.7223, -9.1393] };
 const place = (name) => ({ id: 'g-' + name, name, type: 'locality', address: name, latitude: (COORDS[name] || [0, 0])[0], longitude: (COORDS[name] || [0, 0])[1] });
 
@@ -116,6 +117,42 @@ async function mockApi(page, options = {}) {
       return json(200, { requestId: 'r', result: { issueHash: body.issueHash, issueCode: body.issueCode, issueName: 'x', options: options.noSuggestions ? [] : byCode[body.issueCode] || [] } });
     }
     if (/\/merge-days$/.test(url.pathname) && request.method() === 'POST') { fixed.add('h-oslo'); return json(200, { requestId: 'r', result: {} }); }
+    // ---- share by link ----
+    const links = (options.links = options.links || []);
+    if (url.pathname === '/api/links' && request.method() === 'GET') return json(200, { requestId: 'r', result: links });
+    if (url.pathname === '/api/links' && request.method() === 'POST') {
+      if (options.linkCreateStatus) return json(options.linkCreateStatus, { error: { message: 'boom' } });
+      const body = JSON.parse(request.postData());
+      const existing = links.find((l) => l.tripId === body.tripId);
+      if (existing) return json(201, { requestId: 'r', result: existing });
+      const code = `00000000-0000-4000-8000-${String(++nextId).padStart(12, '0')}`;
+      const created = { id: nextId, tripId: body.tripId, code, createdAt: '2026-11-20T10:00:00Z' };
+      links.push(created);
+      return json(201, { requestId: 'r', result: created });
+    }
+    const linkId = url.pathname.match(/^\/api\/links\/(\d+)$/);
+    if (linkId && request.method() === 'DELETE') {
+      const index = links.findIndex((l) => String(l.id) === linkId[1]);
+      if (index >= 0) links.splice(index, 1);
+      return json(200, { requestId: 'r', result: null });
+    }
+    const linkPreview = url.pathname.match(/^\/api\/links\/([0-9a-f-]{36})\/preview$/);
+    if (linkPreview && request.method() === 'GET') {
+      if (options.previewStatus) return json(options.previewStatus, { error: { message: 'boom' } });
+      const link = links.find((l) => l.code === linkPreview[1]) || (linkPreview[1] === KNOWN_LINK ? { tripId: 1 } : null);
+      const detail = link && details[link.tripId];
+      if (!detail) return json(404, { error: { message: 'Link not found.' } });
+      return json(200, { requestId: 'r', result: {
+        trip: { name: detail.trip.name, startDate: detail.trip.startDate, description: detail.trip.description ?? null },
+        routeStops: detail.stops.map((st) => ({ id: st.id, order: st.order, location: st.location, transport: st.transport ?? null, plannedDays: st.plannedDays ?? null })),
+        days: detail.days.map((d) => ({ id: d.id, order: d.order, routeStopId: d.routeStopId, title: d.title, description: d.description })),
+      } });
+    }
+    const linkApply = url.pathname.match(/^\/api\/links\/([0-9a-f-]{36})$/);
+    if (linkApply && request.method() === 'GET') {
+      if (options.applyStatus) return json(options.applyStatus, { error: { message: options.applyMessage || 'boom' } });
+      return json(200, { requestId: 'r', result: { id: 5, name: 'Lisbon with Olena', startDate: farFuture, isDraft: false, shareId: 99, sharedBy: 'Olena' } });
+    }
     const chat = url.pathname.match(/^\/api\/trips\/(\d+)\/chat$/);
     if (chat && request.method() === 'POST') {
       if (options.chatStatus) return json(options.chatStatus, { error: { message: options.chatMessage || 'boom' } });
@@ -238,4 +275,4 @@ async function mockApi(page, options = {}) {
   });
 }
 
-module.exports = { mockApi, signIn, sampleTrips, sampleDetails };
+module.exports = { mockApi, signIn, sampleTrips, sampleDetails, KNOWN_LINK };
