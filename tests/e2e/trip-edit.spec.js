@@ -239,12 +239,13 @@ test('the Draft switch saves isDraft and updates the status badge', async ({ pag
   const draft = page.getByRole('switch', { name: 'Draft' });
   await expect(draft).not.toBeChecked();
   await draft.check();
-  await expect(page.locator('#trip-status')).toHaveText('Draft');
+  await expect(page.locator('#draft-label')).toHaveText('Draft');
+  await expect(page.locator('#trip-status')).toBeHidden();
   await expect(page.locator('#save-status')).toContainText('All changes saved');
   const put = writes(requests).find((r) => r.path === '/api/trips/1');
   expect(put.body).toMatchObject({ name: '2 weeks in Norway', isDraft: true });
   await draft.uncheck();
-  await expect(page.locator('#trip-status')).not.toHaveText('Draft');
+  await expect(page.locator('#draft-label')).not.toHaveText('Draft');
 });
 
 test('the Draft switch is not shown on a shared trip', async ({ page }) => {
@@ -252,4 +253,5 @@ test('the Draft switch is not shown on a shared trip', async ({ page }) => {
   await page.goto('/trip/?id=5');
   await expect(page.locator('#trip-name')).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Draft' })).toHaveCount(0);
+  await expect(page.locator('#trip-status')).toBeVisible();
 });

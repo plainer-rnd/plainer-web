@@ -12,9 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=23">
+<link rel="stylesheet" href="/css/app.css?v=24">
 <script src="/js/theme.js?v=1" defer></script>
-<script type="module" src="/js/trip.js?v=7"></script>
+<script type="module" src="/js/trip.js?v=8"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -54,7 +54,7 @@
       <h1 class="display trip-title" id="trip-name"></h1>
       <div class="trip-meta t2">
         <span class="badge" id="trip-status"></span>
-        <label class="draft-toggle" id="draft-toggle" hidden><input type="checkbox" role="switch" id="draft-switch"><span>Draft</span></label>
+        <label class="draft-toggle" id="draft-toggle" hidden><input type="checkbox" role="switch" id="draft-switch" aria-label="Draft"><span id="draft-label"></span></label>
         <span id="trip-dates"></span>
         <span aria-hidden="true" class="muted">·</span>
         <span id="trip-owner"></span>

@@ -42,6 +42,7 @@ const nodes = {
   status: document.getElementById('trip-status'),
   draftToggle: document.getElementById('draft-toggle'),
   draftSwitch: document.getElementById('draft-switch'),
+  draftLabel: document.getElementById('draft-label'),
   dates: document.getElementById('trip-dates'),
   owner: document.getElementById('trip-owner'),
   people: document.getElementById('trip-people'),
@@ -433,7 +434,11 @@ function renderHeader() {
   }
   nodes.status.className = `badge b-${status}`;
   nodes.status.textContent = STATUS_LABEL[status];
+  // Owners get the switch with a coloured status label in place of the badge; readers keep the badge.
   nodes.draftToggle.hidden = !canEdit();
+  nodes.status.hidden = canEdit();
+  nodes.draftToggle.dataset.status = status;
+  nodes.draftLabel.textContent = STATUS_LABEL[status];
   nodes.draftSwitch.checked = trip.isDraft;
   const datesText = tripDatesLabel(trip.startDate, state.days.length);
   if (canEdit()) {
