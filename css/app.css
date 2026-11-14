@@ -477,3 +477,9 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .radio-group{border:0;padding:0;margin:14px 0 4px}
 .pl .radio-row{display:flex;align-items:center;gap:10px;min-height:36px;font-size:14px;cursor:pointer}
 @media (max-width:640px){.pl .radio-row{min-height:44px}.pl .page-actions{width:100%}}
+
+/* Progress dialog */
+.pl .progress-dialog{text-align:center;min-width:260px}
+.pl .spinner{width:40px;height:40px;margin:16px auto 8px;border-radius:50%;border:4px solid var(--line2);border-top-color:var(--green);animation:pl-spin .9s linear infinite}
+@keyframes pl-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pl .spinner{animation-duration:2.4s}}

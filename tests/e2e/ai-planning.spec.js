@@ -25,6 +25,8 @@ test.describe('Plan with AI (trips list)', () => {
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('  7 days in Portugal, foodie ');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();
+    await expect(page.getByRole('alertdialog', { name: 'Planning your trip…' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Plan with AI' })).toHaveCount(0);
     await expect(page).toHaveURL(/\/trip\/\?id=99$/);
     const post = writes(requests).find((r) => r.path === '/api/trips/express');
     expect(post.body).toEqual({ instructions: '7 days in Portugal, foodie' });
@@ -52,10 +54,12 @@ test.describe('Plan with AI (trips list)', () => {
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('hello');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();
-    await expect(dialog.getByRole('alert')).toHaveText('That doesn’t look like a trip.');
+    const again = page.getByRole('dialog', { name: 'Plan with AI' });
+    await expect(again.getByRole('alert')).toHaveText('That doesn’t look like a trip.');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/trips\/$/);
-    await expect(dialog.getByRole('button', { name: 'Plan my trip' })).toBeEnabled();
-    await expect(dialog.getByLabel('Describe your trip')).toBeEnabled();
+    await expect(again.getByLabel('Describe your trip')).toHaveValue('hello');
+    await expect(again.getByRole('button', { name: 'Plan my trip' })).toBeEnabled();
   });
 
   test('unresolved places are listed before opening the trip', async ({ page }) => {
@@ -63,8 +67,9 @@ test.describe('Plan with AI (trips list)', () => {
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('Atlantis');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();
-    await expect(dialog).toContainText('Atlantis');
-    await expect(dialog.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trip/?id=99');
+    const ready = page.getByRole('dialog', { name: 'Your trip is ready' });
+    await expect(ready).toContainText('Atlantis');
+    await expect(ready.getByRole('link', { name: 'Open trip' })).toHaveAttribute('href', '/trip/?id=99');
   });
 
   test('server errors show a message', async ({ page }) => {
@@ -72,7 +77,8 @@ test.describe('Plan with AI (trips list)', () => {
     const dialog = await openPlan(page);
     await dialog.getByLabel('Describe your trip').fill('Rome');
     await dialog.getByRole('button', { name: 'Plan my trip' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Couldn’t plan that right now');
+    await expect(page.getByRole('dialog', { name: 'Plan with AI' }).getByRole('alert')).toContainText('Couldn’t plan that right now');
+    await expect(page.getByLabel('Describe your trip')).toHaveValue('Rome');
   });
 });
 
