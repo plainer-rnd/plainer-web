@@ -22,6 +22,9 @@ export function tripFromDto(dto) {
     description: dto.description ?? null,
     shareId: dto.shareId ?? null,
     sharedBy: dto.sharedBy ?? null,
+    // Older servers don't send these: null means "unknown", which is not the same as 0.
+    stopCount: Number.isInteger(dto.stopCount) ? dto.stopCount : null,
+    dayCount: Number.isInteger(dto.dayCount) ? dto.dayCount : null,
   };
 }
 
@@ -53,6 +56,15 @@ export function formatStartDate(date) {
 
 export function datesLabel(trip) {
   return trip.startDate ? 'Starts ' + formatStartDate(trip.startDate) : 'Dates not set';
+}
+
+// "3 stops · 7 days", or null when the server didn't say.
+export function countsLabel(trip) {
+  if (trip.stopCount === null || trip.dayCount === null) return null;
+  if (trip.stopCount === 0 && trip.dayCount === 0) return 'No stops yet';
+  const stops = `${trip.stopCount} ${trip.stopCount === 1 ? 'stop' : 'stops'}`;
+  const days = `${trip.dayCount} ${trip.dayCount === 1 ? 'day' : 'days'}`;
+  return `${stops} · ${days}`;
 }
 
 export function ownerLabel(trip, sharedWithCount) {

@@ -3,11 +3,11 @@ const farPast = '2020-01-01T00:00:00Z';
 const farFuture = '2099-06-12T00:00:00Z';
 
 const sampleTrips = [
-  { id: 1, name: '2 weeks in Norway', startDate: farPast, isDraft: false },
-  { id: 2, name: 'Scotland', startDate: farFuture, isDraft: false },
-  { id: 3, name: 'Long weekend in Rome', startDate: '0001-01-01T00:00:00Z', isDraft: true },
+  { id: 1, name: '2 weeks in Norway', startDate: farPast, isDraft: false, stopCount: 3, dayCount: 3 },
+  { id: 2, name: 'Scotland', startDate: farFuture, isDraft: false, stopCount: 1, dayCount: 1 },
+  { id: 3, name: 'Long weekend in Rome', startDate: '0001-01-01T00:00:00Z', isDraft: true, stopCount: 0, dayCount: 0 },
   { id: 4, name: 'France', startDate: '0001-01-01T00:00:00Z', isDraft: true },
-  { id: 5, name: 'Lisbon with Olena', startDate: farFuture, isDraft: false, shareId: 50, sharedBy: 'Olena' },
+  { id: 5, name: 'Lisbon with Olena', startDate: farFuture, isDraft: false, shareId: 50, sharedBy: 'Olena', stopCount: 2, dayCount: 5 },
   { id: 6, name: 'Max’s Alps', startDate: farPast, isDraft: false, shareId: 60, sharedBy: 'Max' },
 ];
 
@@ -136,7 +136,9 @@ async function mockApi(page, options = {}) {
     }
     if (url.pathname.endsWith('/export/pdf')) {
       if (options.exportStatus) return json(options.exportStatus, { error: 'boom' });
-      return route.fulfill({ status: 200, contentType: 'application/pdf', headers: { 'access-control-allow-origin': '*' }, body: '%PDF-1.4 fake' });
+      const headers = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Content-Disposition' };
+      if (options.exportDisposition !== null) headers['content-disposition'] = options.exportDisposition || `attachment; filename="Plainer – Norway – 2020-01-01.pdf"; filename*=UTF-8''Plainer%20%E2%80%93%20Norway%20%E2%80%93%202020-01-01.pdf`;
+      return route.fulfill({ status: 200, contentType: 'application/pdf', headers, body: '%PDF-1.4 fake' });
     }
     if (url.pathname === '/api/trip-shares' && request.method() === 'POST') {
       const body = JSON.parse(request.postData());

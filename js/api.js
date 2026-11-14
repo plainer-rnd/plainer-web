@@ -1,6 +1,6 @@
 // Client for plainer-trips-server: Firebase ID token as Bearer, response envelope unwrapped.
 import { config } from './config.js';
-import { buildUrl, unwrap, errorMessageFrom, ApiError } from './api-utils.js';
+import { buildUrl, unwrap, errorMessageFrom, fileNameFromDisposition, ApiError } from './api-utils.js';
 
 export { ApiError };
 
@@ -41,7 +41,7 @@ export function createApi(user) {
     return unwrap(parsed);
   }
 
-  // For files (PDF export): returns the Blob instead of parsed JSON.
+  // For files (PDF export): returns the Blob and the server's file name (null if the browser can't see the header).
   async function download(endpoint) {
     let response;
     try {
@@ -51,7 +51,7 @@ export function createApi(user) {
       throw new ApiError(0, 'Network error');
     }
     if (!response.ok) throw new ApiError(response.status, errorMessageFrom(await readBody(response), response.status));
-    return response.blob();
+    return { blob: await response.blob(), fileName: fileNameFromDisposition(response.headers.get('Content-Disposition')) };
   }
 
   return {

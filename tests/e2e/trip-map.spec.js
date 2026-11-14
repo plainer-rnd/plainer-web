@@ -43,6 +43,43 @@ test('hovering a stop in the list highlights its pin and fades the others', asyn
   await expect(page.locator('.leaflet-marker-icon.is-dim')).toHaveCount(0);
 });
 
+test('hovering a pin lights up its row in the Route list and its group in the Days list', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(pins(page)).toHaveCount(3);
+  await page.locator('.leaflet-marker-icon[aria-label$="Bergen"]').hover();
+  await expect(page.locator('.stop-row.is-pointed')).toHaveCount(1);
+  await expect(page.locator('.stop-row.is-pointed')).toContainText('Bergen');
+  await expect(page.locator('.group.is-pointed')).toContainText('Bergen · 1 day');
+  await expect(page.locator('.leaflet-marker-icon[aria-label$="Bergen"]')).toHaveClass(/is-active/);
+  await page.mouse.move(0, 0);
+  await expect(page.locator('.is-pointed')).toHaveCount(0);
+  await expect(page.locator('.leaflet-marker-icon.is-active')).toHaveCount(0);
+});
+
+test('hovering a stop’s group in the Days list highlights its pin and row', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(pins(page)).toHaveCount(3);
+  await page.locator('.day-row', { hasText: 'Art and Culture' }).hover();
+  await expect(page.locator('.leaflet-marker-icon[aria-label$="Oslo"]')).toHaveClass(/is-active/);
+  await expect(page.locator('.leaflet-marker-icon[aria-label$="Bergen"]')).toHaveClass(/is-dim/);
+  await expect(page.locator('.stop-row.is-pointed')).toContainText('Oslo');
+  await expect(page.locator('.group.is-pointed')).toContainText('Oslo · 2 days');
+  await page.mouse.move(0, 0);
+  await expect(page.locator('.is-pointed')).toHaveCount(0);
+});
+
+test('focusing a pin with the keyboard lights up the lists too', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await expect(pins(page)).toHaveCount(3);
+  await page.locator('.leaflet-marker-icon[aria-label$="Flåm"]').focus();
+  await expect(page.locator('.stop-row.is-pointed')).toContainText('Flåm');
+  await page.locator('.leaflet-marker-icon[aria-label$="Flåm"]').blur();
+  await expect(page.locator('.is-pointed')).toHaveCount(0);
+});
+
 test('keyboard focus on a stop highlights it too, and the highlight survives an edit', async ({ page }) => {
   await mockApi(page);
   await page.goto('/trip/?id=1');

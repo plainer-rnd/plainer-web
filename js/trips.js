@@ -3,7 +3,7 @@ import { initAppHeader } from './app-header.js';
 import { createApi } from './api.js';
 import { userInitial } from './user-display.js';
 import {
-  tripFromDto, splitTrips, filterTrips, resolveStatus, coverFor, initialOf, datesLabel, ownerLabel,
+  tripFromDto, splitTrips, filterTrips, resolveStatus, coverFor, initialOf, datesLabel, ownerLabel, countsLabel,
   tripsCountLabel, isShared,
 } from './trips-model.js';
 import { el, svg } from './dom.js';
@@ -215,18 +215,32 @@ function showCreatedSummary(form, outcome) {
   open.focus();
 }
 
-function importDialog() {
+// A created trip with places or days that need a look: tell the user before opening it.
+function showTripReady(outcome) {
+  const summary = el('form', { method: 'dialog' });
+  openDialog({ title: 'Your trip is ready', content: [summary] });
+  showCreatedSummary(summary, outcome);
+}
+
+// `previous` brings the dialog back after a failure with the same file chosen and the error message.
+function importDialog(previous = {}) {
   const input = el('input', { type: 'file', id: 'import-file', class: 'file-input', accept: 'application/pdf,.pdf' });
-  const error = el('p', { class: 'error', role: 'alert' });
-  const progress = el('p', { class: 'muted', role: 'status', 'aria-live': 'polite', hidden: true });
+  if (previous.file) {
+    try {
+      const chosen = new DataTransfer();
+      chosen.items.add(previous.file);
+      input.files = chosen.files;
+    } catch (error) { /* the browser won't let us restore it: the user picks the file again */ }
+  }
+  const error = el('p', { class: 'error', role: 'alert', text: previous.error || '' });
   const cancel = el('button', { type: 'button', class: 'btn btn-outline', text: 'Cancel' });
   const submit = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Import' });
   const form = el('form', { method: 'dialog', novalidate: true }, [
     el('label', { class: 'label', for: 'import-file', text: 'PDF file (up to 3 MB)' }), input,
-    error, progress,
+    error,
     el('div', { class: 'dialog-actions' }, [cancel, submit]),
   ]);
-  const { dialog, close } = openDialog({
+  const { close } = openDialog({
     title: 'Import a trip from PDF',
     description: 'Upload a PDF itinerary, such as one exported from Plainer or a booking plan. We’ll turn it into a new trip you can edit.',
     content: [form],
@@ -238,32 +252,29 @@ function importDialog() {
     const file = input.files[0];
     const problem = importFileProblem(file);
     if (problem) { error.textContent = problem; input.focus(); return; }
-    error.textContent = '';
-    submit.disabled = true;
-    input.disabled = true;
-    progress.hidden = false;
-    progress.textContent = 'Reading your PDF… this can take a minute.';
+    // The form gives way to a progress dialog; on failure it comes back with the file and the error.
+    close();
+    const waiting = progressDialog('Importing your PDF…');
+    let failure = '';
     try {
       const body = new FormData();
       body.append('file', file);
       const outcome = importOutcome(await api.postForm('trips/import', body));
-      if (!dialog.isConnected) { if (outcome.created) refresh(); return; }
-      if (!outcome.created) {
-        error.textContent = outcome.reason;
-      } else if (outcome.needsReview) {
-        showCreatedSummary(form, outcome);
-        return;
-      } else {
+      if (outcome.created && !outcome.needsReview) {
         location.assign('/trip/?id=' + encodeURIComponent(outcome.tripId));
         return;
       }
-    } catch (failure) {
-      if (!dialog.isConnected) return;
-      error.textContent = importErrorMessage(failure.status, failure.message);
+      waiting.close();
+      if (outcome.created) {
+        showTripReady(outcome);
+        return;
+      }
+      failure = outcome.reason;
+    } catch (caught) {
+      waiting.close();
+      failure = importErrorMessage(caught.status, caught.message);
     }
-    progress.hidden = true;
-    submit.disabled = false;
-    input.disabled = false;
+    importDialog({ file, error: failure });
   });
 }
 
@@ -310,9 +321,7 @@ function planDialog(initialText = '', initialError = '') {
       }
       waiting.close();
       if (outcome.created) {
-        const summary = el('form', { method: 'dialog' });
-        openDialog({ title: 'Your trip is ready', content: [summary] });
-        showCreatedSummary(summary, outcome);
+        showTripReady(outcome);
         return;
       }
       failure = outcome.reason;
@@ -335,6 +344,7 @@ function tripCard(trip, user) {
     el('div', { class: 'tcard-body' }, [
       el('h2', { class: 'clamp1', text: trip.name }),
       el('span', { class: 'muted', text: datesLabel(trip) }),
+      countsLabel(trip) ? el('span', { class: 'muted small tcounts', text: countsLabel(trip) }) : null,
     ]),
     el('div', { class: 'tcard-foot' }, [
       el('span', { class: 'avatar xs', 'aria-hidden': 'true', text: ownerInitial(trip, user) }),
@@ -352,6 +362,7 @@ function tripRow(trip) {
       el('div', { class: 'tname' }, [
         el('a', { class: 'clamp1', href: tripHref(trip), text: trip.name }),
         el('span', { class: 'tsub', text: dates }),
+        countsLabel(trip) ? el('span', { class: 'tcounts', text: countsLabel(trip) }) : null,
       ]),
     ])),
     el('td', { class: 'col-dates', text: dates }),
@@ -398,7 +409,7 @@ function emptyState(listIsEmpty) {
   const planAi = el('button', { type: 'button', class: 'btn btn-outline', text: 'Plan with AI' });
   planAi.addEventListener('click', () => planDialog());
   const importPdf = el('button', { type: 'button', class: 'btn btn-outline', text: 'Import PDF' });
-  importPdf.addEventListener('click', importDialog);
+  importPdf.addEventListener('click', () => importDialog());
   const getApp = el('a', { class: 'btn btn-outline', href: APP_STORE_URL, text: 'Get the iPhone app' });
   return stateBlock('No trips yet', 'Start a trip here, plan one with AI, import a PDF, or plan one in the Plainer iPhone app.', el('div', { class: 'dialog-actions' }, [create, planAi, importPdf, getApp]));
 }
@@ -516,5 +527,5 @@ nodes.search.addEventListener('input', () => {
 start();
 
 document.getElementById('new-trip').addEventListener('click', newTripDialog);
-document.getElementById('import-pdf').addEventListener('click', importDialog);
+document.getElementById('import-pdf').addEventListener('click', () => importDialog());
 document.getElementById('plan-ai').addEventListener('click', () => planDialog());

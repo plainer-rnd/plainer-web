@@ -62,16 +62,32 @@ test('invalid and unknown emails get a clear message', async ({ page }) => {
   await expect(dialog.getByRole('alert')).toContainText('doesn’t have a Plainer account');
 });
 
-test('Export PDF downloads a file named after the trip', async ({ page }) => {
+test('Export PDF downloads a file with the name the server gives it', async ({ page }) => {
   const requests = [];
   await mockApi(page, { requests });
   await page.goto('/trip/?id=1');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export PDF' }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe('Plainer – 2 weeks in Norway.pdf');
+  expect(file.suggestedFilename()).toBe('Plainer – Norway – 2020-01-01.pdf');
   expect(requests.some((r) => r.path === '/api/trips/1/export/pdf' && r.authorization === 'Bearer fake-token')).toBe(true);
   await expect(page.getByRole('button', { name: 'Export PDF' })).toBeEnabled();
+});
+
+test('without a readable Content-Disposition header the file is named after the trip', async ({ page }) => {
+  await mockApi(page, { exportDisposition: null });
+  await page.goto('/trip/?id=1');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export PDF' }).click();
+  expect((await download).suggestedFilename()).toBe('Plainer – 2 weeks in Norway.pdf');
+});
+
+test('a hostile file name from the server can only ever be a plain file name', async ({ page }) => {
+  await mockApi(page, { exportDisposition: 'attachment; filename="../../evil.pdf"' });
+  await page.goto('/trip/?id=1');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export PDF' }).click();
+  expect((await download).suggestedFilename()).toBe('evil.pdf');
 });
 
 test('a failed export says so', async ({ page }) => {
