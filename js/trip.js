@@ -275,8 +275,8 @@ function stopRow(group, index) {
       el('div', { class: 'stop-edit-body' }, [
         el('span', { class: 'day-title', text: stop.name }),
         el('div', { class: 'stop-edit-fields' }, [
-          el('div', { class: 'field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
-          el('div', { class: 'field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Getting there' }), transportSelect(stop)]),
+          el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
+          el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
         ]),
         el('div', { class: 'stop-edit-actions' }, done),
       ]),

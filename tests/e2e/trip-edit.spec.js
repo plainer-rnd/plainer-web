@@ -190,7 +190,7 @@ test('stops are compact rows; only one opens for editing at a time', async ({ pa
   await oslo.click();
   await expect(page.getByRole('group', { name: 'Editing Oslo' })).toBeVisible();
   await expect(page.getByText('Planned days', { exact: true })).toBeVisible();
-  await expect(page.getByText('Getting there', { exact: true })).toBeVisible();
+  await expect(page.getByText('Transport', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Edit stop Bergen' }).click();
   await expect(page.getByRole('group', { name: 'Editing Bergen' })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Editing Oslo' })).toHaveCount(0);
