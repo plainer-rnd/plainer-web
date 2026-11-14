@@ -6,7 +6,7 @@ import {
   stopFromDto, dayFromDto, buildItinerary, tripDatesLabel, dayDateLabel, overviewOf, validationValue,
   stopMeta, sharedPeople, parseTripId, plural, hasPlan,
   textToLines, linesToHtml, sameLines, dateInputValue, parseDateInput, dateToApi, TRANSPORT_TYPES,
-  insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody,
+  insertIndexForStop, dayMoveIndex, stopMoveIds, duplicateDayBody, stopDropIds, dayDropOrder,
 } from './trip-model.js';
 import { el, svg } from './dom.js';
 import { editable } from './inline-edit.js';
@@ -197,6 +197,7 @@ function dayRow(day) {
     toggle,
   ]);
 
+  if (canEdit()) dragAndDrop(row, { kind: 'day', scope: `stop-${day.stopId}`, item: day, onDrop: dropDay });
   const parts = [row];
   if (open) {
     const commitPlan = (text) => {
@@ -225,7 +226,6 @@ const ICONS = {
   down: '<path d="M12 5v14M5 12l7 7 7-7"></path>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>',
-  place: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle>',
 };
 
 // Icon-only round button; the label is the tooltip and the accessible name.
@@ -262,6 +262,60 @@ function renderDays() {
     ]);
   });
   nodes.daysList.replaceChildren(...(groups.length ? groups : [el('p', { class: 'muted empty-note', text: 'No stops or days yet. Plan them in the Plainer app.' })]));
+}
+
+// ---- drag and drop (mouse; touch uses the Move up / Move down buttons) ----
+
+let drag = null;
+
+function clearDropMarks() {
+  document.querySelectorAll('.drop-before, .drop-after, .dragging').forEach((node) => node.classList.remove('drop-before', 'drop-after', 'dragging'));
+}
+
+// Makes `node` draggable and a drop target among others of the same `kind` ("stop", or "day" inside one stop).
+// onDrop(draggedItem, targetItem, after) decides what the drop means.
+function dragAndDrop(node, { kind, scope, item, onDrop, canDrop }) {
+  node.draggable = true;
+  // Selecting text inside a field must not start a drag.
+  node.addEventListener('mousedown', (event) => { node.draggable = !event.target.closest('input, textarea, select'); });
+  node.addEventListener('dragstart', (event) => {
+    drag = { kind, scope, item };
+    node.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(item.id));
+  });
+  node.addEventListener('dragend', () => { drag = null; clearDropMarks(); });
+  node.addEventListener('dragover', (event) => {
+    if (!drag || drag.kind !== kind || drag.scope !== scope || drag.item === item) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const box = node.getBoundingClientRect();
+    const after = event.clientY > box.top + box.height / 2;
+    node.classList.toggle('drop-after', after);
+    node.classList.toggle('drop-before', !after);
+  });
+  node.addEventListener('dragleave', () => node.classList.remove('drop-before', 'drop-after'));
+  node.addEventListener('drop', (event) => {
+    if (!drag || drag.kind !== kind || drag.scope !== scope) return;
+    event.preventDefault();
+    const dragged = drag.item;
+    const after = node.classList.contains('drop-after');
+    drag = null;
+    clearDropMarks();
+    onDrop(dragged, item, after);
+  });
+}
+
+function dropStop(dragged, target, after) {
+  const ids = stopDropIds(state.stops, dragged.id, target.id, after);
+  if (!ids) return;
+  structure({ send: () => state.api.post(`trips/${state.id}/route-stops/reorder`, { orderedStopIds: ids }) });
+}
+
+function dropDay(dragged, target, after) {
+  const order = dayDropOrder(state.groups, dragged, target, after);
+  if (order === null) return;
+  structure({ send: () => state.api.put(`trips/${state.id}/days/${dragged.id}`, { order }) });
 }
 
 function stepperFor(stop) {
@@ -319,10 +373,7 @@ function stopRow(group, index) {
     const editor = el('div', { class: 'stop-row stop-edit', role: 'group', 'aria-label': `Editing ${stop.name}` }, [
       number,
       el('div', { class: 'stop-edit-body' }, [
-        el('div', { class: 'stop-edit-name' }, [
-          el('span', { class: 'day-title', text: stop.name }),
-          actionButton('place', `Change place for ${stop.name}`, () => changePlace(stop)),
-        ]),
+        el('span', { class: 'day-title', text: stop.name }),
         el('div', { class: 'stop-edit-fields' }, [
           el('div', { class: 'edit-field' }, [el('span', { class: 'field-label', 'aria-hidden': 'true', text: 'Planned days' }), stepperFor(stop)]),
           el('div', { class: 'edit-field' }, [el('label', { class: 'field-label', for: `transport-${stop.id}`, text: 'Transport' }), transportSelect(stop)]),
@@ -356,7 +407,9 @@ function stopRow(group, index) {
     const done = document.querySelector('.stop-edit .stepper button:not(:disabled)');
     if (done) done.focus();
   });
-  return el('div', { class: 'stop-row' }, [number, open]);
+  const row = el('div', { class: 'stop-row' }, [number, open]);
+  dragAndDrop(row, { kind: 'stop', scope: 'route', item: stop, onDrop: dropStop });
+  return row;
 }
 
 function renderRoute() {
@@ -613,12 +666,6 @@ async function addStop() {
       state.editingStop = created.id;
     },
   });
-}
-
-async function changePlace(stop) {
-  const locationId = await pickPlace(`Change place for ${stop.name}`);
-  if (!locationId) return;
-  structure({ send: () => state.api.put(`trips/${state.id}/route-stops/${stop.id}`, { locationId }) });
 }
 
 // ---- trip actions (⋯ menu) ----

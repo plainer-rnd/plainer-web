@@ -108,18 +108,6 @@ test('remove a stop confirms with its day count', async ({ page }) => {
   expect(writes(requests)[0]).toMatchObject({ method: 'DELETE', path: '/api/trips/1/route-stops/11' });
 });
 
-test('change a stop’s place', async ({ page }) => {
-  const requests = [];
-  await mockApi(page, { requests });
-  await page.goto('/trip/?id=1');
-  await page.getByRole('button', { name: 'Edit stop Flåm' }).click();
-  await page.getByRole('button', { name: 'Change place for Flåm' }).click();
-  await page.getByRole('searchbox', { name: 'Place' }).fill('Stav');
-  await page.getByRole('button', { name: /Stavanger/ }).click();
-  await expect(page.locator('#save-status')).toContainText('All changes saved');
-  expect(writes(requests)[0]).toMatchObject({ method: 'PUT', path: '/api/trips/1/route-stops/13', body: { locationId: 'g-Stavanger' } });
-});
-
 test('a failed structure change reloads the real state and offers Retry', async ({ page }) => {
   await mockApi(page, { writeStatus: 500 });
   await page.goto('/trip/?id=1');
@@ -135,4 +123,49 @@ test('a view-only trip has none of these controls', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add stop' })).toBeHidden();
   await expect(page.getByRole('button', { name: /Add a day/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Delete day|Duplicate day|Move day/ })).toHaveCount(0);
+});
+
+test('drag a day below another day in the same stop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 });
+  const requests = [];
+  await mockApi(page, { requests });
+  await page.goto('/trip/?id=1');
+  const rows = page.locator('#days-list .day-row');
+  await rows.nth(0).dragTo(rows.nth(1), { targetPosition: { x: 100, y: 40 } });
+  await expect(dayTitles(page)).toHaveText(['Art and Culture', 'Historic Core', 'Day 3']);
+  expect(writes(requests)[0]).toMatchObject({ method: 'PUT', path: '/api/trips/1/days/101', body: { order: 1 } });
+});
+
+test('a day cannot be dropped onto another stop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 });
+  const requests = [];
+  await mockApi(page, { requests });
+  await page.goto('/trip/?id=1');
+  const rows = page.locator('#days-list .day-row');
+  await rows.nth(0).dragTo(rows.nth(2));
+  expect(writes(requests)).toHaveLength(0);
+  await expect(dayTitles(page)).toHaveText(['Historic Core', 'Art and Culture', 'Day 3']);
+});
+
+test('drag a stop to the top of the route', async ({ page }) => {
+  const requests = [];
+  await mockApi(page, { requests });
+  await page.goto('/trip/?id=1');
+  const rows = page.locator('#route-list .stop-row');
+  await rows.nth(2).dragTo(rows.nth(0), { targetPosition: { x: 100, y: 4 } });
+  await expect(headings(page)).toHaveText(['Flåm · 0 days', 'Oslo · 2 days', 'Bergen · 1 day']);
+  expect(writes(requests)[0]).toMatchObject({ path: '/api/trips/1/route-stops/reorder', body: { orderedStopIds: [13, 11, 12] } });
+});
+
+test('the stop editor no longer has Change place', async ({ page }) => {
+  await mockApi(page);
+  await page.goto('/trip/?id=1');
+  await page.getByRole('button', { name: 'Edit stop Oslo' }).click();
+  await expect(page.getByRole('button', { name: /Change place/ })).toHaveCount(0);
+});
+
+test('view-only trips cannot be dragged', async ({ page }) => {
+  await mockApi(page, { sharedWithMe: [{ id: 5, name: 'Lisbon with Olena', shareId: 50, sharedBy: 'Olena' }] });
+  await page.goto('/trip/?id=5');
+  await expect(page.locator('[draggable="true"]')).toHaveCount(0);
 });

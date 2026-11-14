@@ -208,3 +208,34 @@ export function duplicateDayBody(day, order) {
 export function newTripBody(name, startDate) {
   return { name, startDate: startDate ? dateToApi(startDate) : '0001-01-01T00:00:00Z', description: null, isDraft: true };
 }
+
+// ---- drag and drop ----
+
+// A copy of `items` with the one that has `id` taken out and put just before or after the one with `targetId`.
+export function moveItem(items, id, targetId, after) {
+  const moving = items.find((item) => item.id === id);
+  const rest = items.filter((item) => item.id !== id);
+  const at = rest.findIndex((item) => item.id === targetId);
+  if (!moving || at < 0) return items;
+  rest.splice(after ? at + 1 : at, 0, moving);
+  return rest;
+}
+
+// Stop ids in their new order after dropping a stop next to another, or null if nothing changes.
+export function stopDropIds(stops, id, targetId, after) {
+  const ordered = [...stops].sort((a, b) => a.order - b.order);
+  const next = moveItem(ordered, id, targetId, after);
+  const ids = next.map((stop) => stop.id);
+  return ids.every((value, index) => value === ordered[index].id) ? null : ids;
+}
+
+// New global index for a day dropped next to another day of the same stop, or null if nothing changes
+// (or the two days are in different stops, which the API can't do).
+export function dayDropOrder(groups, day, target, after) {
+  const group = groups.find((g) => g.days.includes(day));
+  if (!group || !group.days.includes(target) || day === target) return null;
+  const next = moveItem(group.days, day.id, target.id, after);
+  const from = group.days.indexOf(day);
+  const to = next.indexOf(day);
+  return from === to ? null : group.days[0].number - 1 + to;
+}
