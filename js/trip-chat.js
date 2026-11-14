@@ -1,8 +1,8 @@
 // Trip assistant: a chat where the owner asks for changes in plain language. The server proposes what it would do,
-// nothing changes until the user confirms, and the page then reads the trip back. The conversation lives in memory
-// for this page visit; closing the window doesn't lose it, and a reply that arrives meanwhile is kept.
+// nothing changes until the user confirms, and the page then reads the trip back.
+// It is a side panel, not a modal window: the trip stays visible and editable next to it. Hiding the panel keeps the
+// conversation, the unsent draft and whether it was open; they also survive a reload of the page (this browser tab only).
 import { el } from './dom.js';
-import { openDialog } from './dialogs.js';
 import {
   EXAMPLE_PROMPTS, MAX_MESSAGE_CHARS, canAddMessage, changeCards, changedTheTrip, chatErrorMessage, historyAfterReply, kindLabel, messageProblem, needsConfirmation,
 } from './chat-model.js';
@@ -10,15 +10,66 @@ import {
 let nextId = 0;
 const newId = () => `m${++nextId}`;
 
-export function createTripChat({ api, tripId, onChanged }) {
-  let messages = [];
-  let history = [];
-  let sending = false;
-  let view = null;
+const storageKey = (tripId) => `plainerChat-${tripId}`;
 
-  async function exchange(outgoing, actionPlanId, onError) {
+function readSaved(tripId) {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(storageKey(tripId)) || 'null');
+    if (!saved || !Array.isArray(saved.messages) || !Array.isArray(saved.history)) return null;
+    const messages = saved.messages
+      .filter((m) => m && ['user', 'assistant', 'error'].includes(m.role) && typeof m.text === 'string')
+      .map((m) => ({ ...m, id: newId() }));
+    const history = saved.history.filter((m) => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string');
+    return { messages, history, draft: typeof saved.draft === 'string' ? saved.draft : '', open: saved.open === true };
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeSaved(tripId, value) {
+  try {
+    if (!value.messages.length && !value.draft && !value.open) window.sessionStorage.removeItem(storageKey(tripId));
+    else window.sessionStorage.setItem(storageKey(tripId), JSON.stringify(value));
+  } catch (error) { /* storage blocked: the conversation just lasts until the page is reloaded */ }
+}
+
+export function createTripChat({ api, tripId, onChanged, opener }) {
+  const saved = readSaved(tripId);
+  let messages = saved ? saved.messages : [];
+  let history = saved ? saved.history : [];
+  let sending = false;
+  let isOpen = false;
+
+  const list = el('div', { class: 'chat-list', role: 'log', 'aria-live': 'polite', 'aria-label': 'Conversation' });
+  const input = el('textarea', { class: 'picker-input chat-input', rows: '2', maxlength: String(MAX_MESSAGE_CHARS), 'aria-label': 'Message to the assistant', placeholder: 'e.g. Add 2 days in Bergen' });
+  input.value = saved ? saved.draft : '';
+  const note = el('p', { class: 'error', role: 'alert' });
+  const sendButton = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Send' });
+  const newChatButton = el('button', { type: 'button', class: 'btn btn-outline btn-sm', text: 'New chat' });
+  const closeButton = el('button', { type: 'button', class: 'icon-btn plain sm', 'aria-label': 'Hide the assistant', title: 'Hide the assistant', text: '✕' });
+  const form = el('form', { class: 'chat-form', novalidate: true }, [note, input, el('div', { class: 'chat-form-actions' }, [el('span', { class: 'chat-hint muted small', text: 'Enter to send' }), sendButton])]);
+  const panel = el('aside', { class: 'chat-panel', id: 'chat-panel', 'aria-label': 'Trip assistant', hidden: true }, [
+    el('div', { class: 'chat-head' }, [
+      el('div', {}, [el('h2', { text: 'Trip assistant' }), el('p', { class: 'muted small', text: 'Changes happen only after you confirm them.' })]),
+      el('div', { class: 'chat-head-actions' }, [newChatButton, closeButton]),
+    ]),
+    list, form,
+  ]);
+  document.body.append(panel);
+
+  function persist() {
+    writeSaved(tripId, {
+      messages: messages.map(({ id, ...rest }) => rest),
+      history,
+      draft: input.value,
+      open: isOpen,
+    });
+  }
+
+  async function exchange(outgoing, actionPlanId, retryInfo) {
     sending = true;
     render();
+    let changed = false;
     try {
       const response = await api.post(`trips/${tripId}/chat`, { messages: outgoing, actionPlanId });
       history = historyAfterReply(outgoing, response.reply);
@@ -32,14 +83,16 @@ export function createTripChat({ api, tripId, onChanged }) {
         planId: pending ? response.actionPlanId : null,
         resolved: false,
       });
-      if (changedTheTrip(response)) {
-        try { await onChanged(); } catch (error) { /* the reply is still shown; reloading the page picks the changes up */ }
-      }
+      changed = changedTheTrip(response);
     } catch (failure) {
-      messages.push({ id: newId(), role: 'error', text: chatErrorMessage(failure.status, failure.message), retry: onError });
+      messages.push({ id: newId(), role: 'error', text: chatErrorMessage(failure.status, failure.message), retry: retryInfo });
     }
     sending = false;
     render();
+    // The reply is on screen first; the trip is read back afterwards (the page may hold this until the user stops typing).
+    if (changed) {
+      try { await onChanged(); } catch (error) { /* the next refresh picks the changes up */ }
+    }
   }
 
   function send(text) {
@@ -53,7 +106,7 @@ export function createTripChat({ api, tripId, onChanged }) {
   function confirm(message) {
     if (sending || !message.planId) return;
     message.resolved = true;
-    exchange(history, message.planId, { kind: 'confirm', message });
+    exchange(history, message.planId, { kind: 'confirm', planId: message.planId });
   }
 
   function cancel(message) {
@@ -65,7 +118,7 @@ export function createTripChat({ api, tripId, onChanged }) {
   function retry(message) {
     if (sending) return;
     messages = messages.filter((m) => m.id !== message.id);
-    if (message.retry.kind === 'confirm') exchange(history, message.retry.message.planId, message.retry);
+    if (message.retry.kind === 'confirm') exchange(history, message.retry.planId, message.retry);
     else exchange([...history, { role: 'user', content: message.retry.text }], undefined, message.retry);
   }
 
@@ -74,7 +127,7 @@ export function createTripChat({ api, tripId, onChanged }) {
     messages = [];
     history = [];
     render();
-    if (view) view.input.focus();
+    input.focus();
   }
 
   const button = (text, className, handler) => {
@@ -88,8 +141,8 @@ export function createTripChat({ api, tripId, onChanged }) {
       el('span', { class: 'chat-avatar', 'aria-hidden': 'true', text: '✦' }),
       el('div', { class: 'chat-bubble assistant', text: message.text }),
     ])];
-    message.actions.forEach((description) => parts.push(el('div', { class: 'chat-card' }, [el('span', { class: 'chat-card-icon', 'aria-hidden': 'true', text: '✓' }), el('span', { text: description })])));
-    message.cards.forEach((card) => parts.push(el('div', { class: 'chat-card' }, [
+    (message.actions || []).forEach((description) => parts.push(el('div', { class: 'chat-card' }, [el('span', { class: 'chat-card-icon', 'aria-hidden': 'true', text: '✓' }), el('span', { text: description })])));
+    (message.cards || []).forEach((card) => parts.push(el('div', { class: 'chat-card' }, [
       el('span', { class: 'chat-card-icon', 'aria-hidden': 'true', text: card.kind === 'other' ? '✓' : kindLabel(card.kind)[0] }),
       el('span', { text: card.name }),
       el('span', { class: `chat-badge ${card.badge === 'Deleted' ? 'deleted' : ''}`, text: card.badge }),
@@ -122,9 +175,9 @@ export function createTripChat({ api, tripId, onChanged }) {
   }
 
   function render() {
-    if (!view) return;
     const full = !canAddMessage(history);
-    view.list.replaceChildren(...[
+    const stick = list.scrollHeight - list.scrollTop - list.clientHeight < 80; // keep the place if they scrolled up to read
+    list.replaceChildren(...[
       messages.length ? null : emptyState(),
       ...messages.map(messageNode),
       sending ? el('div', { class: 'chat-row', role: 'status' }, [
@@ -133,48 +186,55 @@ export function createTripChat({ api, tripId, onChanged }) {
       ]) : null,
       full ? el('p', { class: 'muted small chat-note', text: 'This conversation is getting long. Start a new chat to continue.' }) : null,
     ].filter(Boolean));
-    view.send.disabled = sending || full;
-    view.newChat.hidden = messages.length === 0;
-    view.list.setAttribute('aria-busy', String(sending));
-    view.list.scrollTop = view.list.scrollHeight;
+    sendButton.disabled = sending || full;
+    newChatButton.hidden = messages.length === 0;
+    list.setAttribute('aria-busy', String(sending));
+    if (stick || sending) list.scrollTop = list.scrollHeight;
+    persist();
   }
 
-  function open() {
-    const list = el('div', { class: 'chat-list', role: 'log', 'aria-live': 'polite', 'aria-label': 'Conversation' });
-    const input = el('textarea', { class: 'picker-input chat-input', rows: '2', maxlength: String(MAX_MESSAGE_CHARS), 'aria-label': 'Message to the assistant', placeholder: 'e.g. Add 2 days in Bergen' });
-    const sendButton = el('button', { type: 'submit', class: 'btn btn-primary', text: 'Send' });
-    const newChatButton = button('New chat', 'btn-outline', newChat);
-    const close = el('button', { type: 'button', class: 'btn btn-outline', text: 'Close' });
-    const note = el('p', { class: 'error', role: 'alert' });
-    const form = el('form', { method: 'dialog', class: 'chat-form', novalidate: true }, [
-      note, input,
-      el('div', { class: 'chat-form-actions' }, [newChatButton, el('span', { class: 'spacer' }), close, sendButton]),
-    ]);
-    const dialog = openDialog({
-      title: 'Trip assistant',
-      description: 'Changes happen only after you confirm them.',
-      content: [list, form],
-    });
-    dialog.dialog.classList.add('chat-dialog');
-    view = { list, input, send: sendButton, newChat: newChatButton };
-    dialog.dialog.addEventListener('close', () => { view = null; });
-    close.addEventListener('click', dialog.close);
+  function setOpen(open, { focus = true } = {}) {
+    if (open === isOpen) return;
+    isOpen = open;
+    panel.hidden = !open;
+    document.documentElement.classList.toggle('chat-open', open);
+    if (opener) opener.setAttribute('aria-expanded', String(open));
+    // the page changed width: let the map redraw
+    window.dispatchEvent(new Event('resize'));
+    if (open) {
+      list.scrollTop = list.scrollHeight;
+      if (focus) input.focus();
+    } else if (focus && opener) {
+      opener.focus();
+    }
+    persist();
+  }
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const problem = messageProblem(input.value);
-      if (sending) return;
-      if (problem) { note.textContent = problem; input.focus(); return; }
-      note.textContent = '';
-      if (send(input.value)) input.value = '';
-      input.focus();
-    });
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit(); }
-    });
-    render();
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (sending) return;
+    const problem = messageProblem(input.value);
+    if (problem) { note.textContent = problem; input.focus(); return; }
+    note.textContent = '';
+    if (send(input.value)) input.value = '';
+    persist();
     input.focus();
-  }
+  });
+  input.addEventListener('input', persist);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); form.requestSubmit(); }
+  });
+  panel.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !event.defaultPrevented) { event.stopPropagation(); setOpen(false); }
+  });
+  newChatButton.addEventListener('click', newChat);
+  closeButton.addEventListener('click', () => setOpen(false));
 
-  return { open };
+  render();
+  return {
+    toggle: () => setOpen(!isOpen),
+    open: (options) => setOpen(true, options),
+    close: () => setOpen(false),
+    wasOpen: Boolean(saved && saved.open),
+  };
 }

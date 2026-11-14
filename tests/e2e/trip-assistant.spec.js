@@ -14,11 +14,12 @@ async function openChat(page, options = {}) {
   await mockApi(page, options);
   await page.goto('/trip/?id=1');
   await page.getByRole('button', { name: 'Trip assistant' }).click();
-  return page.getByRole('dialog', { name: 'Trip assistant' });
+  return page.getByRole('complementary', { name: 'Trip assistant' });
 }
 
-test('the assistant opens with an empty state and example prompts', async ({ page }) => {
+test('the assistant opens as a side panel with an empty state and example prompts', async ({ page }) => {
   const dialog = await openChat(page);
+  await expect(page.getByRole('button', { name: 'Trip assistant' })).toHaveAttribute('aria-expanded', 'true');
   await expect(dialog).toContainText('Ask me to change your trip');
   await expect(dialog.getByRole('button', { name: /Add 3 days in Rome after Florence/ })).toBeVisible();
   await expect(dialog.getByLabel('Message to the assistant')).toBeFocused();
@@ -124,7 +125,7 @@ test('while waiting, a thinking indicator shows and Send is disabled', async ({ 
   await page.route('**/api/trips/1/chat', async (route) => { await new Promise((r) => setTimeout(r, 700)); await route.fallback(); });
   await page.goto('/trip/?id=1');
   await page.getByRole('button', { name: 'Trip assistant' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Trip assistant' });
+  const dialog = page.getByRole('complementary', { name: 'Trip assistant' });
   await dialog.getByLabel('Message to the assistant').fill('Add a day in Oslo');
   await dialog.getByRole('button', { name: 'Send' }).click();
   await expect(dialog.locator('.typing')).toBeVisible();
@@ -133,14 +134,15 @@ test('while waiting, a thinking indicator shows and Send is disabled', async ({ 
   await expect(dialog.getByRole('button', { name: 'Send' })).toBeEnabled();
 });
 
-test('closing and reopening keeps the conversation; New chat clears it', async ({ page }) => {
+test('hiding and showing keeps the conversation; New chat clears it', async ({ page }) => {
   const dialog = await openChat(page);
   await dialog.getByLabel('Message to the assistant').fill('Add a day in Oslo');
   await dialog.getByRole('button', { name: 'Send' }).click();
   await expect(dialog.locator('.chat-bubble.assistant')).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Close' }).click();
+  await dialog.getByRole('button', { name: 'Hide the assistant' }).click();
+  await expect(dialog).toBeHidden();
   await page.getByRole('button', { name: 'Trip assistant' }).click();
-  const again = page.getByRole('dialog', { name: 'Trip assistant' });
+  const again = page.getByRole('complementary', { name: 'Trip assistant' });
   await expect(again.locator('.chat-bubble.user')).toHaveText('Add a day in Oslo');
   await expect(again.getByRole('button', { name: 'Apply changes' })).toBeVisible();
   await again.getByRole('button', { name: 'New chat' }).click();
@@ -166,17 +168,161 @@ test('a shared (view-only) trip has no assistant', async ({ page }) => {
 
 test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 800 } });
-  test('the assistant button is a 44px icon and the chat fits the screen', async ({ page }) => {
+  test('the assistant button is a 44px icon and the panel fills the screen', async ({ page }) => {
     await mockApi(page);
     await page.goto('/trip/?id=1');
     const box = await page.getByRole('button', { name: 'Trip assistant' }).boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
     await page.getByRole('button', { name: 'Trip assistant' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Trip assistant' });
+    const dialog = page.getByRole('complementary', { name: 'Trip assistant' });
     await expect(dialog.getByRole('button', { name: 'Send' })).toBeVisible();
     const fit = await dialog.boundingBox();
     expect(fit.height).toBeLessThanOrEqual(800);
+    expect(fit.width).toBeGreaterThanOrEqual(388);
+    expect((await dialog.getByRole('button', { name: 'Hide the assistant' }).boundingBox()).height).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  });
+});
+
+test.describe('beside the trip', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the page stays usable: it makes room and you can edit while the panel is open', async ({ page }) => {
+    const requests = [];
+    const panel = await openChat(page, { requests });
+    // the page is pushed left, so nothing is covered
+    const body = await page.evaluate(() => getComputedStyle(document.body).paddingRight);
+    expect(parseInt(body, 10)).toBeGreaterThanOrEqual(400);
+    const exportBox = await page.getByRole('button', { name: 'Export PDF' }).boundingBox();
+    const panelBox = await panel.boundingBox();
+    expect(exportBox.x + exportBox.width).toBeLessThanOrEqual(panelBox.x);
+    // no modal: the trip is interactive
+    await page.getByRole('button', { name: /Edit trip name/ }).click();
+    const nameInput = page.getByRole('textbox', { name: 'trip name' });
+    await nameInput.fill('Norway with the assistant');
+    await nameInput.press('Enter');
+    await expect(page.locator('#trip-name')).toHaveText('Norway with the assistant');
+    expect(writes(requests).some((r) => r.method === 'PUT' && r.path === '/api/trips/1')).toBe(true);
+    await expect(panel).toBeVisible();
+  });
+
+  test('you can ask, edit by hand, and the assistant’s change lands next to your edit', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('Add a day in Oslo');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.getByRole('button', { name: 'Apply changes' })).toBeVisible();
+    // a manual change while a proposal waits
+    await page.getByRole('button', { name: 'Edit trip name' }).click();
+    await page.getByRole('textbox', { name: 'trip name' }).fill('Edited meanwhile');
+    await page.getByRole('textbox', { name: 'trip name' }).press('Enter');
+    await expect(page.locator('#save-status')).toContainText('All changes saved');
+    await panel.getByRole('button', { name: 'Apply changes' }).click();
+    await expect(page.locator('#days-list .day-title', { hasText: 'Extra day in Oslo' })).toBeVisible();
+    await expect(page.locator('#days-list .ghead b').first()).toHaveText('Oslo · 3 days');
+  });
+
+  test('the assistant’s change waits for a field you are typing in and does not wipe it', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('Add a day in Oslo');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.getByRole('button', { name: 'Apply changes' })).toBeVisible();
+    await page.route('**/api/trips/1/chat', async (route) => { await new Promise((r) => setTimeout(r, 700)); await route.fallback(); });
+    await panel.getByRole('button', { name: 'Apply changes' }).click();
+    // while the assistant works, start typing in the trip name
+    await page.getByRole('button', { name: /Edit trip name/ }).click();
+    const input = page.getByRole('textbox', { name: 'trip name' });
+    await input.fill('Half typed');
+    await expect(panel.locator('.chat-badge')).toBeVisible(); // the answer has arrived
+    await page.waitForTimeout(900);
+    await expect(input).toHaveValue('Half typed'); // the page was not reloaded under the cursor
+    await expect(page.locator('#days-list .day-title', { hasText: 'Extra day in Oslo' })).toHaveCount(0);
+    await input.press('Enter'); // done typing
+    await expect(page.locator('#trip-name')).toHaveText('Half typed');
+    await expect(page.locator('#days-list .day-title', { hasText: 'Extra day in Oslo' })).toBeVisible({ timeout: 8000 });
+  });
+
+  test('Esc hides the panel and gives focus back to the button; the page goes back to full width', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Trip assistant' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Trip assistant' })).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => getComputedStyle(document.body).paddingRight)).toBe('0px');
+  });
+
+  test('the button toggles the panel, keeping the draft and the conversation', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('Add a day in Oslo');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.locator('.chat-bubble.assistant')).toHaveCount(1);
+    await panel.getByLabel('Message to the assistant').fill('half written');
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    await expect(panel).toBeHidden();
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    await expect(panel.locator('.chat-bubble.user')).toHaveText('Add a day in Oslo');
+    await expect(panel.getByLabel('Message to the assistant')).toHaveValue('half written');
+    await expect(panel.getByRole('button', { name: 'Apply changes' })).toBeVisible();
+  });
+
+  test('a reload brings back the panel, the conversation, the pending proposal and the draft', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('Add a day in Oslo');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.getByRole('button', { name: 'Apply changes' })).toBeVisible();
+    await panel.getByLabel('Message to the assistant').fill('unsent thought');
+    await page.reload();
+    const again = page.getByRole('complementary', { name: 'Trip assistant' });
+    await expect(again).toBeVisible();
+    await expect(again.locator('.chat-bubble.user')).toHaveText('Add a day in Oslo');
+    await expect(again.getByLabel('Message to the assistant')).toHaveValue('unsent thought');
+    await expect(page.getByRole('button', { name: 'Trip assistant' })).toHaveAttribute('aria-expanded', 'true');
+    await again.getByRole('button', { name: 'Apply changes' }).click();
+    await expect(again.locator('.chat-badge')).toBeVisible();
+  });
+
+  test('a hidden panel stays hidden after a reload, and New chat forgets the conversation', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('What is the weather?');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.locator('.chat-bubble.assistant')).toHaveCount(1);
+    await panel.getByRole('button', { name: 'Hide the assistant' }).click();
+    await page.reload();
+    await expect(page.locator('#trip-name')).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Trip assistant' })).toBeHidden();
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    const again = page.getByRole('complementary', { name: 'Trip assistant' });
+    await expect(again.locator('.chat-bubble.user')).toHaveText('What is the weather?');
+    await again.getByRole('button', { name: 'New chat' }).click();
+    await page.reload();
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    await expect(page.getByRole('complementary', { name: 'Trip assistant' }).locator('.chat-bubble')).toHaveCount(0);
+  });
+
+  test('the conversation belongs to its trip', async ({ page }) => {
+    const panel = await openChat(page);
+    await panel.getByLabel('Message to the assistant').fill('What is the weather?');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.locator('.chat-bubble.assistant')).toHaveCount(1);
+    await page.goto('/trip/?id=2');
+    await expect(page.locator('#trip-name')).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Trip assistant' })).toBeHidden();
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    await expect(page.getByRole('complementary', { name: 'Trip assistant' }).locator('.chat-bubble')).toHaveCount(0);
+  });
+
+  test('the map follows the narrower page when the panel opens', async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/trip/?id=1');
+    await expect(page.locator('.map-pin')).toHaveCount(3);
+    const before = (await page.locator('#trip-map').boundingBox()).width;
+    await page.getByRole('button', { name: 'Trip assistant' }).click();
+    await expect.poll(async () => (await page.locator('#trip-map').boundingBox()).width).toBeLessThan(before);
+    // the map redrew for its new size: every pin is still inside it
+    const map = await page.locator('#trip-map').boundingBox();
+    for (const pin of await page.locator('.map-pin').all()) {
+      const box = await pin.boundingBox();
+      expect(box.x + box.width).toBeLessThanOrEqual(map.x + map.width);
+    }
   });
 });

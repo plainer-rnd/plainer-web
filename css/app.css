@@ -529,9 +529,16 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .group>.ghead{border-radius:12px;transition:background .12s}
 .pl .tcounts{display:block;font-size:13px;color:var(--t3)}
 
-/* Trip assistant chat */
-.pl .chat-dialog{max-width:560px;width:calc(100% - 24px);height:min(82vh,760px);display:flex;flex-direction:column;overflow:hidden;padding:20px}
-.pl .chat-dialog[open]{display:flex}
+/* Trip assistant: a side panel; the page makes room for it on wide screens */
+.pl .chat-panel{position:fixed;top:0;right:0;bottom:0;width:var(--chat-w,420px);z-index:60;display:flex;flex-direction:column;background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.08);padding:16px}
+.pl .chat-panel[hidden]{display:none}
+.pl .chat-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.pl .chat-head h2{margin:0;font-size:20px}
+.pl .chat-head p{margin:2px 0 0}
+.pl .chat-head-actions{display:flex;gap:8px;align-items:center}
+.pl .chat-hint{margin:0}
+@media (min-width:1100px){html.pl.chat-open body{padding-right:var(--chat-w,420px)}}
+@media (max-width:640px){.pl .chat-panel{width:100%;border-left:0;box-shadow:none}.pl .chat-head .icon-btn,.pl .chat-head .btn{min-height:44px;min-width:44px}}
 .pl .chat-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:8px 2px;margin:0 -2px}
 .pl .chat-row{display:flex;align-items:flex-end;gap:8px}
 .pl .chat-row.user{justify-content:flex-end}
@@ -552,12 +559,11 @@ textarea.inline-input{resize:vertical;line-height:1.55;padding:6px 8px}
 .pl .chat-note{text-align:center;margin:0!important}
 .pl .chat-form{margin-top:8px;flex:0 0 auto}
 .pl .chat-input{width:100%;resize:none;font:inherit}
-.pl .chat-form-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
-.pl .chat-form-actions .spacer{flex:1}
+.pl .chat-form-actions{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
 .pl .typing{display:inline-flex;gap:4px;align-items:center;padding:14px 16px}
 .pl .typing i{width:7px;height:7px;border-radius:50%;background:var(--t3);animation:pl-blink 1.2s infinite ease-in-out}
 .pl .typing i:nth-child(2){animation-delay:.2s}
 .pl .typing i:nth-child(3){animation-delay:.4s}
 @keyframes pl-blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.pl .typing i{animation:none;opacity:.6}}
-@media (max-width:640px){.pl .chat-dialog{height:calc(100dvh - 24px);max-height:none}.pl .chat-form-actions .btn,.pl .chat-confirm .btn,.pl .chat-error .btn{min-height:44px}.pl .chat-bubble{max-width:90%}}
+@media (max-width:640px){.pl .chat-form-actions .btn,.pl .chat-confirm .btn,.pl .chat-error .btn{min-height:44px}.pl .chat-bubble{max-width:90%}}

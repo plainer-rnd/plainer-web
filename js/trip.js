@@ -418,7 +418,7 @@ function closeStopEditor({ restoreFocus = true } = {}) {
 // (Clicks on another stop's row are left to that row, which opens it.)
 document.addEventListener('click', (event) => {
   if (state.editingStop === null) return;
-  if (event.target.closest('.stop-edit, [data-stop-open], dialog')) return;
+  if (event.target.closest('.stop-edit, [data-stop-open], dialog, .chat-panel')) return;
   closeStopEditor({ restoreFocus: false });
 });
 
@@ -834,11 +834,24 @@ nodes.draftSwitch.addEventListener('change', () => editTrip('isDraft', nodes.dra
 
 let chat = null;
 
-nodes.assistantBtn.addEventListener('click', () => {
-  // One conversation per page visit. A change the assistant makes is read back like any other refresh.
-  if (!chat) chat = createTripChat({ api: state.api, tripId: state.id, onChanged: async () => { await load(state.api, state.id); render(); } });
-  chat.open();
-});
+// The assistant is a side panel the page stays usable beside. When it changes the trip, the page is read back, but not
+// while the user is typing in a field or an edit is still saving (that would wipe what they are doing).
+async function reloadAfterAssistant() {
+  for (let waited = 0; waited < 15000; waited += 300) {
+    const typing = document.activeElement && document.activeElement.classList.contains('inline-input');
+    if (!typing && !queue.isBusy()) break;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  await load(state.api, state.id);
+  render();
+}
+
+function ensureChat() {
+  if (!chat) chat = createTripChat({ api: state.api, tripId: state.id, onChanged: reloadAfterAssistant, opener: nodes.assistantBtn });
+  return chat;
+}
+
+nodes.assistantBtn.addEventListener('click', () => ensureChat().toggle());
 
 nodes.shareBtn.addEventListener('click', () => {
   openShareDialog({
@@ -924,6 +937,10 @@ async function start() {
   render();
   nodes.skeleton.hidden = true;
   nodes.app.hidden = false;
+  if (canEdit()) {
+    const assistant = ensureChat();
+    if (assistant.wasOpen) assistant.open({ focus: false }); // picked up where it was left, even after a reload
+  }
 }
 
 wirePaneTabs();
