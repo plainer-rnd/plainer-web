@@ -5,18 +5,19 @@ Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, 
 - `index.html`, `support/`, `wtm/`, `policy/`, `404.html`: pages (folder-per-page for clean URLs)
 - `css/site.css`: design tokens (`:root`, light and `:root[data-theme="dark"]`) plus one block per component
 - `css/app.css`: styles for the signed-in area and the login/sign-up pages (same palette, `.pl` scope)
-- `login/`, `signup/`, `trips/`, `profile/` (and later `trip/`): the personal area, vanilla ES modules in `js/`
+- `login/`, `signup/`, `trips/`, `trip/`, `profile/`, `join-shared-trip/`: the personal area, vanilla ES modules in `js/`
 - `js/config.js`: Dev/Prod config picked by hostname; `js/firebase.js`: Firebase Auth and session helpers; `js/theme.js`: theme toggle
+- `js/`: the rest are small modules: `*-model.js` are pure logic (no DOM, unit-tested), `api.js`/`api-utils.js`/`public-api.js` call the backend, `trip*.js`, `share-dialog.js`, `dialogs.js`, `inline-edit.js`, `validation-review.js` and `ai-days-dialog.js` are the trip page UI, `auth-ui.js`/`auth-utils.js`/`app-header.js`/`user-display.js` are shared by the signed-in pages
 - `js/site.js`: optional enhancement (copy email, menu close, sticky download bar). Pages work without it
 - `assets/`: images (WebP + JPG at 400/800 px), icons, OG image, QR code
-- `_redirects`, `_headers`: Cloudflare Pages config
+- `_redirects`, `_headers`: Netlify redirects and headers
 - `apple-app-site-association`: universal links for the iOS app
 
 ## Develop
 
     python3 -m http.server 8000   # then open http://localhost:8000
 
-`_redirects` and `_headers` only apply on Cloudflare Pages.
+`_redirects` and `_headers` only apply on Netlify. For the signed-in pages use `PORT=8000 node tests/serve.js` instead (see Run locally below).
 
 ## Conventions
 
@@ -24,50 +25,28 @@ Static site for https://plainer.co.uk: hand-written HTML and CSS, no framework, 
 - No inline styles. Links are root-relative.
 - After changing `site.css` or `site.js`, bump the `?v=` query in every page.
 
-## Deploy to Cloudflare Pages
+## Deploy to Netlify
 
-### 1. Create the project (Git integration, recommended)
+`netlify.toml` has no framework build: the build command copies the deployable files into `build/` (the publish directory) and leaves out `README.md`, `tests/`, `docs/`, `node_modules/`, `package*.json` and other dev-only files. If you add a new dev-only file or folder at the root, add it to the `--exclude` list there.
 
-1. In the Cloudflare dashboard go to **Workers & Pages → Create → Pages → Connect to Git**.
-2. Authorise GitHub and pick the `plainer-web` repository.
-3. Build settings:
-   - Production branch: `main`
-   - Framework preset: **None**
-   - Build command: *leave empty*
-   - Build output directory: `/`
-4. Click **Save and Deploy**. Pushes to `main` go to production; every other branch and PR gets its own preview URL (`<branch>.<project>.pages.dev`).
+- Pushes to `main` go to production (`plainer.co.uk`); every other branch and PR gets a preview (`<branch>--plainer.netlify.app`, `deploy-preview-<n>--plainer.netlify.app`), which uses the **Dev** Firebase project and backend (see below).
+- `_redirects` and `_headers` are read by Netlify from the published folder; they do nothing when serving locally (`tests/serve.js` mimics the few rewrites the tests need).
 
-Alternative without Git (direct upload):
+### Verify before going live (and before printing the cards)
 
-    npx wrangler pages deploy . --project-name=plainer
-
-Run it from the repo root. It uploads everything in the folder, so make sure no local-only files (e.g. a `design-handoff/` folder) are lying around.
-
-### 2. Custom domain
-
-1. Project → **Custom domains → Set up a custom domain**.
-2. Add `plainer.co.uk` and `www.plainer.co.uk`. If the domain's DNS is on Cloudflare the records are created for you; otherwise add the CNAME shown.
-3. Redirect `www` to the apex (Bulk Redirects or a Redirect Rule: `www.plainer.co.uk/*` → `https://plainer.co.uk/${1}`, 301).
-
-### 3. Analytics
-
-Project → **Metrics → Web Analytics → Enable**. Cloudflare injects the beacon, so there is no snippet to add. `/wtm/` page views approximate business-card scans.
-
-### 4. Verify before going live (and before printing the cards)
-
-Use the preview URL first, then the real domain, on an iPhone in a private tab:
+Use the deploy preview first, then the real domain, on an iPhone in a private tab:
 
 - `/wtm`, `/wtm/` and `/contact` all load (the first redirects to `/wtm/`, the last to `/support/`)
-- An unknown URL such as `/nope` shows the 404 page (not the home page)
+- An unknown URL such as `/nope` serves the home page (the SPA-style fallback in `_redirects`); `404.html` is not used for it
 - `/apple-app-site-association` returns JSON
+- `/join-shared-trip?code=x` loads the share page without a redirect (it must stay a `200` rewrite for universal links)
 - Every App Store button opens the listing, and the `/wtm/` button uses `ct=wtm2026`
 
 ### Notes
 
-- `_redirects` and `_headers` are read by Pages automatically; they do nothing when serving locally.
-- After editing `css/site.css` or `js/site.js`, bump the `?v=` query on the links in every page so browsers fetch the new file (HTML itself is not cached by Pages).
-- Don't add a Content-Security-Policy until Google Fonts and the Cloudflare analytics beacon are allowed in it.
-- Don't add extra Cache Rules; asset file names are not content-hashed.
+- After editing `css/site.css` or `js/site.js`, bump the `?v=` query on the links in every page so browsers fetch the new file.
+- Don't add a Content-Security-Policy until Google Fonts and the cdnjs Leaflet script are allowed in it.
+- Asset file names are not content-hashed, so keep the short cache times in `_headers`.
 
 ## Before launch
 
