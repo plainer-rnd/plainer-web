@@ -6,8 +6,8 @@ const environments = {
   prod: {
     name: 'prod',
     firebase: {
-      apiKey: 'REPLACE_PROD_FIREBASE_API_KEY',
-      authDomain: 'REPLACE_PROD_FIREBASE_AUTH_DOMAIN',
+      apiKey: 'AIzaSyDRRcqoH41S5lFhwPDgo-S8S7bLIINE_qY',
+      authDomain: 'plainer-prod-c4880.firebasestorage.app',
     },
     apiBaseUrl: 'https://plainer-trips-prod-537949589654.europe-west1.run.app',
   },
