@@ -76,3 +76,24 @@
     }
   }
 })();
+
+// Launch video: custom play overlay -> native controls
+document.querySelectorAll('[data-video]').forEach(function (frame) {
+  var video = frame.querySelector('video');
+  var play = frame.querySelector('[data-video-play]');
+  if (!video || !play) return;
+  video.controls = false;
+  play.addEventListener('click', function () {
+    frame.classList.add('is-playing');
+    video.controls = true;
+    var p = video.play();
+    if (p && p.catch) p.catch(function () {});
+    video.focus();
+  });
+  video.addEventListener('ended', function () {
+    frame.classList.remove('is-playing');
+    video.controls = false;
+    // load() resets the element, so the poster shows again (currentTime = 0 would show the first frame)
+    video.load();
+  });
+});
